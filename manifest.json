@@ -1,0 +1,14 @@
+{
+  "name": "League Now Playing",
+  "description": "Allows one to see information on summoners and their game",
+  "version": "0.1",
+  "manifest_version": 2,
+  "permissions": ["<all_urls>"],
+  "app": {
+    "background": {
+      "scripts": ["background.js"]
+    }
+  },
+
+  "icons": { "16": "icon16.png", "128": "icon128.png" }
+}
