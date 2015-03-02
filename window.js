@@ -24,13 +24,29 @@ window.onload = function(){
 
 
 function setApiKey(){
-	key = document.getElementById("apiKey").value;
-	var spanNode = document.getElementById("apiSpan");
-	spanNode.style.display = "none";
+	var tempKey = document.getElementById("apiKey").value;
+	var testRequest = {"command" : "test", "testKey" : tempKey};
+	testRequest.callback = function(success) {
+		var spanNode = document.getElementById("apiSpan");
+		if(success)
+		{
+			key = tempKey;
+			spanNode.style.display = "none";
+		}
+		else
+		{
+			if(spanNode.getElementsByTagName("span").length < 1) // if it doesn't exist yet, create it
+				spanNode.appendChild(document.createElement("span"));
+			spanNode.getElementsByTagName("span")[0].innerHTML = "Invalid API Key";
+		}
+	}
+	apiReq(testRequest);
+	
 }
 
 function getMatchInfo(pId){
-	xmlReq("GET", "https://na.api.pvp.net/observer-mode/rest/consumer/getSpectatorGameInfo/NA1/" + pId + "?api_key=" + key, function(resp){
+	var q1 = {"command" : "playerCurrentMatchInfo", "playerId" : pId};
+	q1.callback = function(resp){
 		var obj = JSON.parse(resp);
 		if(obj == null || obj.gameStartTime == null)
 			return;
@@ -50,18 +66,29 @@ function getMatchInfo(pId){
 			lengthString = lengthString + "0";
 		lengthString = lengthString + length % 60;
 
+		var q2 = {"command" : "championInfoById", "champId" : champ};
+		q2.callback = function(resp){
+			var champName = "<>";
+			if(resp != null)
+				champName = JSON.parse(resp).name;
 
-		xmlReq("GET", "https://global.api.pvp.net/api/lol/static-data/na/v1.2/champion/" + champ + "?champData=info&api_key=" + key, function(resp) {
-			var obj2 = JSON.parse(resp);
 			var target = document.getElementById(pId).getElementsByTagName("td")[2]; // gets the "get match info" cell
-			target.innerHTML = lengthString + "<br />" + obj2.name;
+			target.innerHTML = lengthString + "<br />" + champName;
 
-			// document.getElementById("matchInfo").innerHTML= JSON.stringify(obj) + "<br />" +  JSON.stringify(obj2);
-		});
+			setMatchInfo(JSON.stringify(obj));
+			// 
+		};
+		apiReq(q2);
 
+	};
 
-	});
+	apiReq(q1);
 }
+
+function setMatchInfo(str){
+	document.getElementById("matchInfo").innerHTML= str;
+}
+
 
 function xmlReq(method, url, callback){
 	var req = new XMLHttpRequest();
@@ -72,13 +99,55 @@ function xmlReq(method, url, callback){
 	req.send();
 }
 
+function apiReq(query) {
+	if(query == null)
+		return false;
+	if(query.region == null)
+		query.region = "na";
+	if(query["platform"] == null)
+		query["platform"] = "NA1";
+	switch(query.command)
+	{
+		case "playerCurrentMatchInfo":
+			xmlReq("GET", "https://na.api.pvp.net/observer-mode/rest/consumer/getSpectatorGameInfo/" + query["platform"] + "/" + query.playerId + "?api_key=" + key, function(resp){
+				query.callback(resp);
+			});
+		case "championInfoById":
+			xmlReq("GET", "https://global.api.pvp.net/api/lol/static-data/" + query.region + "/v1.2/champion/" + query.champId + "?champData=info&api_key=" + key, function(resp) {
+				query.callback(resp);
+			});
+			break;
+		case "getPlayerInfo":
+			xmlReq("GET", "https://na.api.pvp.net/api/lol/" + query.region + "/v1.4/summoner/by-name/" + query.playerName + "?api_key=" + key, function(resp){
+				query.callback(resp);
+			});
+			break;
+		case "test":
+			xmlReq("GET", "https://na.api.pvp.net/api/lol/na/v1.4/summoner/by-name/RiotSchmick?api_key=" + query.testKey, function(resp){
+				var obj = JSON.parse(resp);
+				if(obj != null && obj["riotschmick"] != null)
+					query.callback(true);
+				else
+					query.callback(false);
+			});
+			break;
+		default:
+			break;
+	}
+	
+}
+
 function addPlayer(){
 	var player = document.getElementById("playerName").value;
 	player = player.replace(" ", "").toLowerCase();
 	document.getElementById("playerName").value = "";
 
 	// https://developer.riotgames.com/docs/getting-started
-	xmlReq("GET", "https://na.api.pvp.net/api/lol/na/v1.4/summoner/by-name/" + player + "?api_key=" + key, function(resp){
+	var query = {"command" : "getPlayerInfo", "playerName": player};
+	query.callback = function(resp) {
+		if(resp == null || resp == false) // call failed
+			return false;
+
 		var obj = JSON.parse(resp)[player];
 
 		if(obj == null || obj.id == null) // failed
@@ -102,9 +171,11 @@ function addPlayer(){
 			row.appendChild(button);
 
 		document.getElementById("playerTable").appendChild(row);
-	});
+	};
 
-	return false; // makes form not submit so no page reload
+	apiReq(query);
+
+	return false;
 }
 
 

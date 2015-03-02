@@ -1,0 +1,3 @@
+* Add way to check how many the person is premade with
+* Add storage of people to persist, and add possibility to remove people form list
+* format match data string somehow
