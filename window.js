@@ -1,6 +1,15 @@
 // useful documentation:
-// https://developer.riotgames.com/docs/getting-started
-
+// riot api
+// https://developer.riotgames.com/api/methods
+// chrome apis
+// https://developer.chrome.com/apps/api_index
+// https://developer.chrome.com/apps/storage
+// 
+// JS xmlHTTPRequest, DOM
+// https://developer.mozilla.org/en-US/docs/Web/API/XMLHttpRequest
+// https://developer.mozilla.org/en-US/docs/Web/API/XMLHttpRequest/Using_XMLHttpRequest
+// https://developer.mozilla.org/en-US/docs/Web/API/Document_Object_Model
+// strings: https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String 
 
 var key = "";
 
@@ -10,24 +19,18 @@ var key = "";
 
 
 window.onload = function(){
-	document.getElementById("saveListButton").onclick = function(){
-		saveList();
-	};
-	document.getElementById("loadListButton").onclick = function(){
-		loadList();
-	};
+	document.getElementById("saveListButton").onclick = saveList;
+	document.getElementById("loadListButton").onclick = loadList;
+	document.getElementById("setApiKeyButton").onclick = setApiKey;
 
-	document.getElementById("setApiKeyButton").onclick = function(){
-		setApiKey();
-	};
 	document.getElementById("apiKey").onkeydown = function(evt){
 		if(evt != null && evt.keyCode != null && evt.keyCode == 13)
 			setApiKey();
 	};
 
-	document.getElementById("addPlayerButton").onclick = function(){
-		addPlayer();
-	};
+
+	document.getElementById("addPlayerButton").onclick = addPlayer;
+
 	document.getElementById("playerName").onkeydown = function(evt){
 		if(evt != null && evt.keyCode != null && evt.keyCode == 13)
 			addPlayer();
@@ -101,52 +104,62 @@ function setApiKey(){
 function getMatchInfo(pId){
 	var q1 = {"command" : "playerCurrentMatchInfo", "playerId" : pId};
 	q1.callback = function(resp){
-		if(q1.responseType != "json")
+		// debugText(resp);
+		if(resp.charAt(0) === '<') // 404 or some error received, usually from not being in game
 		{
 			var target = document.getElementById(pId).cells[2]; // gets the "get match info" cell
-			target.innerHTML = "Not currently in game";
-
+			var q2 = {"command" : "getPlayerInfoById", "playerId" : pId};
+			q2.callback = function(resp2) {
+				var lastSeen = JSON.parse(resp2)[pId].revisionDate; // ms
+				var nowTime = (new Date).getTime(); // ms
+				var timeSinceSeen = Math.floor((nowTime - lastSeen) / 1000 / 60); // minutes
+				var target = document.getElementById(pId).cells[2];
+				target.innerHTML = "last seen " + Math.floor(timeSinceSeen / 60 / 24) + "d " + Math.floor(timeSinceSeen / 60) + "h " + timeSinceSeen % 60 + "m ago";
+			};
+			apiReq(q2);
 			setMatchInfo("");
 			return;
-		}	
-		var obj = JSON.parse(resp);
-		var champ = 0;
-		var team = 0;
-		for(var i=0; i<obj.participants.length; i++)
-		{
-			if(obj.participants[i].summonerId == pId)
-			{
-				champ = obj.participants[i].championId;
-				team = obj.participants[i].team;
-			}
-			obj.participants[i].runes = ["omitted"];
-			obj.participants[i].masteries = ["omitted"];
 		}
+		else
+		{
+			var obj = JSON.parse(resp);
+			var champ = 0;
+			var team = 0;
+			for(var i=0; i<obj.participants.length; i++)
+			{
+				if(obj.participants[i].summonerId == pId)
+				{
+					champ = obj.participants[i].championId;
+					team = obj.participants[i].team;
+				}
+				obj.participants[i].runes = ["omitted"];
+				obj.participants[i].masteries = ["omitted"];
+			}
 
-		var startTime = obj.gameStartTime;
-		var nowTime = (new Date).getTime();
-		var length = Math.floor((nowTime-startTime) / 1000); // milliseconds
-		if(startTime == 0)
-			length = 0;
-		var lengthString = Math.floor(length / 60) + ":";
-		if(length % 60 < 10)
-			lengthString = lengthString + "0";
-		lengthString = lengthString + length % 60;
+			var startTime = obj.gameStartTime;
+			var nowTime = (new Date).getTime();
+			var length = Math.floor((nowTime-startTime) / 1000); // milliseconds
+			if(startTime == 0)
+				length = 0;
+			var lengthString = Math.floor(length / 60) + ":";
+			if(length % 60 < 10)
+				lengthString = lengthString + "0";
+			lengthString = lengthString + length % 60;
 
-		var q2 = {"command" : "championInfoById", "champId" : champ};
-		q2.callback = function(resp){
-			var champName = "<>";
-			if(resp != null)
-				champName = JSON.parse(resp).name;
+			var q2 = {"command" : "championInfoById", "champId" : champ};
+			q2.callback = function(resp2){
+				var champName = "<>";
+				if(resp2 != null)
+					champName = JSON.parse(resp2).name;
 
-			var target = document.getElementById(pId).cells[2]; // gets the "get match info" cell
-			target.innerHTML = lengthString + "<br />" + champName;
+				var target = document.getElementById(pId).cells[2]; // gets the "get match info" cell
+				target.innerHTML = lengthString + "<br />" + champName;
 
-			setMatchInfo(JSON.stringify(obj));
-			// 
-		};
-		apiReq(q2);
-
+				setMatchInfo(JSON.stringify(obj));
+				// 
+			};
+			apiReq(q2);
+		}
 	};
 
 	apiReq(q1);
@@ -179,6 +192,7 @@ function apiReq(query) {
 			xmlReq("GET", "https://na.api.pvp.net/observer-mode/rest/consumer/getSpectatorGameInfo/" + query["platform"] + "/" + query.playerId + "?api_key=" + key, function(resp){
 				query.callback(resp);
 			});
+			break;
 		case "championInfoById":
 			xmlReq("GET", "https://global.api.pvp.net/api/lol/static-data/" + query.region + "/v1.2/champion/" + query.champId + "?champData=info&api_key=" + key, function(resp) {
 				query.callback(resp);
@@ -209,6 +223,12 @@ function apiReq(query) {
 	
 }
 
+
+function removeRow(id) {
+	var row = document.getElementById(id);
+	row.parentNode.removeChild(row);
+}
+
 function addPlayerToTable(id, name){
 	if(document.getElementById(id) != null)
 		return;
@@ -222,10 +242,16 @@ function addPlayerToTable(id, name){
 	var idCell = row.insertCell();
 	idCell.innerHTML = id;
 
-	var button = row.insertCell();
-	button.innerHTML = "Get Match Info";
-	button.onclick = function() {
+	var infoButton = row.insertCell();
+	infoButton.innerHTML = "Get Match Info";
+	infoButton.onclick = function() {
 		getMatchInfo(id);
+	}
+
+	var removeButton = row.insertCell();
+	removeButton.innerHTML = "Remove";
+	removeButton.onclick = function() {
+		removeRow(id);
 	}
 }
 
@@ -239,8 +265,10 @@ function addPlayer(){
 	
 	var query = {"command" : "getPlayerInfo", "playerName": playerName};
 	query.callback = function(resp) {
-		if(resp == null || resp == false) // call failed
+		
+		if(resp.charAt(0) == '<' || resp == null || resp == false ) // call failed
 			return false;
+		
 
 		var obj = JSON.parse(resp)[playerName];
 
