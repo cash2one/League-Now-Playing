@@ -3,7 +3,10 @@
     <script src="window.js"></script>
     </head>
     <body>
-        <input type="text" id="playerName"> <button id="addPlayerButton">Add Player</button>
+        <button id="saveListButton">Save List</button>
+        <button id="loadListButton">Load List</button>
+        <br />
+        
         <table style="width: 90%" id="playerTable"><tbody>
             <tr>
                 <td style="width: 20%">Name</td>
@@ -11,7 +14,7 @@
                 <td style="width: 60%">Get Info</td>
             </tr>
         </tbody></table>
-        <br />
+        <input type="text" id="playerName"> <button id="addPlayerButton">Add Player</button><br />
         <span id="apiSpan"><input type="text" id="apiKey"> <button id="setApiKeyButton">Set API Key</button></span>
 
         <div id="matchInfo"></div>

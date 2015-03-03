@@ -3,7 +3,10 @@
   "description": "Allows one to see information on summoners and their games/groups",
   "version": "0.1",
   "manifest_version": 2,
-  "permissions": ["<all_urls>"],
+  "permissions": [
+    "<all_urls>",
+    "storage"
+    ],
   "app": {
     "background": {
       "scripts": ["background.js"]
