@@ -64,7 +64,7 @@ function saveList(){
 	for(var i = 1; i < playerTableRows.length; i++) // start at 1 to ignore first row
 	{
 		playerIdList.push(playerTableRows[i].id);
-		playerNameList.push(playerTableRows[i].cells[0].innerHTML);
+		playerNameList.push(getNameFromRow(playerTableRows[i]));
 	}
 	chrome.storage.local.set({"playerIds" : playerIdList, "playerNames" : playerNameList});
 }
@@ -82,7 +82,7 @@ function loadList(){
 function setApiKey(){
 	var tempKey = document.getElementById("apiKey").value;
 	var testRequest = {"command" : "test", "testKey" : tempKey};
-	testRequest.callback = function(success) {
+	apiReq(testRequest, function(success) {
 		var spanNode = document.getElementById("apiSpan");
 		if(success)
 		{
@@ -96,33 +96,31 @@ function setApiKey(){
 				spanNode.appendChild(document.createElement("span"));
 			spanNode.getElementsByTagName("span")[0].innerHTML = "Invalid API Key";
 		}
-	}
-	apiReq(testRequest);
-	
+	});
 }
 
 function getMatchInfo(pId){
 	var q1 = {"command" : "playerCurrentMatchInfo", "playerId" : pId};
-	q1.callback = function(resp){
+	apiReq(q1, function(resp){
 		// debugText(resp);
 		if(resp.charAt(0) === '<') // 404 or some error received, usually from not being in game
 		{
-			var target = document.getElementById(pId).cells[2]; // gets the "get match info" cell
 			var q2 = {"command" : "getPlayerInfoById", "playerId" : pId};
-			q2.callback = function(resp2) {
+			apiReq(q2, function(resp2) {
 				var lastSeen = JSON.parse(resp2)[pId].revisionDate; // ms
 				var nowTime = (new Date).getTime(); // ms
 				var timeSinceSeen = Math.floor((nowTime - lastSeen) / 1000 / 60); // minutes
-				var target = document.getElementById(pId).cells[2];
+				var target = getMatchInfoCell(document.getElementById(pId));
 				target.innerHTML = "last seen " + Math.floor(timeSinceSeen / 60 / 24) + "d " + Math.floor(timeSinceSeen / 60) + "h " + timeSinceSeen % 60 + "m ago";
-			};
-			apiReq(q2);
+			});
 			setMatchInfo("");
 			return;
 		}
 		else
 		{
 			var obj = JSON.parse(resp);
+			if(obj.participants == null) // then some other error occurred, such as rate limit being exceeded.
+				return;
 			var champ = 0;
 			var team = 0;
 			for(var i=0; i<obj.participants.length; i++)
@@ -147,22 +145,19 @@ function getMatchInfo(pId){
 			lengthString = lengthString + length % 60;
 
 			var q2 = {"command" : "championInfoById", "champId" : champ};
-			q2.callback = function(resp2){
+			apiReq(q2, function(resp2){
 				var champName = "<>";
 				if(resp2 != null)
 					champName = JSON.parse(resp2).name;
 
-				var target = document.getElementById(pId).cells[2]; // gets the "get match info" cell
+				var target = getMatchInfoCell(document.getElementById(pId));
 				target.innerHTML = lengthString + "<br />" + champName;
 
 				setMatchInfo(JSON.stringify(obj));
 				// 
-			};
-			apiReq(q2);
+			});
 		}
-	};
-
-	apiReq(q1);
+	});
 }
 
 function setMatchInfo(str){
@@ -179,7 +174,12 @@ function xmlReq(method, url, callback){
 	req.send();
 }
 
-function apiReq(query) {
+function apiReq(query, callback) {
+	if(callback == null && query.callback != null)
+		callback = query.callback(); // callback can be set in query object or in this function call.
+	else if(callback == null && query.callback == null)
+		callback = function(resp) {return;}; // do nothing if no callback
+
 	if(query == null)
 		return false;
 	if(query.region == null)
@@ -190,31 +190,31 @@ function apiReq(query) {
 	{
 		case "playerCurrentMatchInfo":
 			xmlReq("GET", "https://na.api.pvp.net/observer-mode/rest/consumer/getSpectatorGameInfo/" + query["platform"] + "/" + query.playerId + "?api_key=" + key, function(resp){
-				query.callback(resp);
+				callback(resp);
 			});
 			break;
 		case "championInfoById":
 			xmlReq("GET", "https://global.api.pvp.net/api/lol/static-data/" + query.region + "/v1.2/champion/" + query.champId + "?champData=info&api_key=" + key, function(resp) {
-				query.callback(resp);
+				callback(resp);
 			});
 			break;
 		case "getPlayerInfo":
 			xmlReq("GET", "https://na.api.pvp.net/api/lol/" + query.region + "/v1.4/summoner/by-name/" + query.playerName + "?api_key=" + key, function(resp){
-				query.callback(resp);
+				callback(resp);
 			});
 			break;
 		case "getPlayerInfoById":
 			xmlReq("GET", "https://na.api.pvp.net/api/lol/" + query.region + "/v1.4/summoner/" + query.playerId + "?api_key=" + key, function(resp){
-				query.callback(resp);
+				callback(resp);
 			});
 			break;
 		case "test":
 			xmlReq("GET", "https://na.api.pvp.net/api/lol/na/v1.4/summoner/by-name/RiotSchmick?api_key=" + query.testKey, function(resp){
 				var obj = JSON.parse(resp);
 				if(obj != null && obj["riotschmick"] != null)
-					query.callback(true);
+					callback(true);
 				else
-					query.callback(false);
+					callback(false);
 			});
 			break;
 		default:
@@ -223,18 +223,71 @@ function apiReq(query) {
 	
 }
 
+function getNameFromRow(row) {
+	return row.cells[1].innerHTML;
+}
+
+function getMatchInfoCell(row) {
+	return row.cells[3];
+}
+
+function moveRowUp(id) {
+	var row = document.getElementById(id);
+	var name = getNameFromRow(row);
+	var startIndex = row.rowIndex;
+	if(startIndex == 1) // at top (just under heading)
+		return;
+	var prevNode = row.previousSibling;
+	row.parentNode.insertBefore(row, prevNode);
+}
+
+function moveRowDown(id) {
+	var row = document.getElementById(id);
+	var name = getNameFromRow(row);
+	var nextNode = row.nextSibling;
+	if(nextNode == null) // at bottom already
+		return;
+	row.parentNode.insertBefore(row, nextNode.nextSibling); // equivalent of insertAfter(row, nextNode)
+	
+}
 
 function removeRow(id) {
 	var row = document.getElementById(id);
 	row.parentNode.removeChild(row);
 }
 
-function addPlayerToTable(id, name){
+function addPlayerToTable(id, name, index){
 	if(document.getElementById(id) != null)
 		return;
 	var tab = document.getElementById("playerTable");
-	var row = tab.insertRow();
+
+	if(index == null)
+		index = -1;
+	if(index > tab.rows.length) // would fail by being over limit
+		index = tab.rows.length; // set to last element
+	var row = tab.insertRow(index);
 	row.id = id;
+
+	var moveCell = row.insertCell();
+		var up = new Image();
+		up.src = 'upArrow.png';
+		up.alt = 'Move Row Up';
+		up.onclick = function() {moveRowUp(id);};
+		
+
+		var down = new Image();
+		down.src = 'downArrow.png';
+		down.alt = 'Move Row Down';
+		down.onclick = function() {moveRowDown(id);};
+		
+		var remove = new Image();
+		remove.src = 'x.png';
+		remove.alt = 'Remove Row';
+		remove.onclick = function() {removeRow(id);};
+
+		moveCell.appendChild(up);
+		moveCell.appendChild(down);
+		moveCell.appendChild(remove);
 
 	var nameCell = row.insertCell();
 	nameCell.innerHTML = name;
@@ -248,11 +301,7 @@ function addPlayerToTable(id, name){
 		getMatchInfo(id);
 	}
 
-	var removeButton = row.insertCell();
-	removeButton.innerHTML = "Remove";
-	removeButton.onclick = function() {
-		removeRow(id);
-	}
+
 }
 
 function addPlayer(){
@@ -264,7 +313,7 @@ function addPlayer(){
 
 	
 	var query = {"command" : "getPlayerInfo", "playerName": playerName};
-	query.callback = function(resp) {
+	apiReq(query, function(resp) {
 		
 		if(resp.charAt(0) == '<' || resp == null || resp == false ) // call failed
 			return false;
@@ -275,9 +324,9 @@ function addPlayer(){
 		if(obj == null || obj.id == null) // failed
 			return false;
 		addPlayerToTable(obj.id, obj.name);
-	};
+	});
 
-	apiReq(query);
+	
 
 	return false;
 }
@@ -285,7 +334,8 @@ function addPlayer(){
 function addPlayerById(playerId){
 	
 	var query = {"command" : "getPlayerInfoById", "playerId": playerId};
-	query.callback = function(resp) {
+
+	apiReq(query, function(resp) {
 		
 		if(resp == null || resp == false) // call failed
 			return false;
@@ -295,9 +345,7 @@ function addPlayerById(playerId){
 		if(obj == null || obj.name == null) // failed
 			return false;
 		addPlayerToTable(obj.id, obj.name);
-	};
-
-	apiReq(query);
+	});
 
 	return false;
 }
