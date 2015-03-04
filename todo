@@ -1,6 +1,3 @@
-* Added ability to move rows in list
-* make apiReq accept second arg as possible callback.
-
 * Add way to check how many friends the person is premade with (is this even possible anymore?)
 	* could check how many other people on this list are in their game, and update their entries as well.
 * format match data string somehow (partly done: masteries and runes omitted)
