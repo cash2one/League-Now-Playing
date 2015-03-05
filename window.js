@@ -1,16 +1,3 @@
-// useful documentation:
-// riot api
-// https://developer.riotgames.com/api/methods
-// chrome apis
-// https://developer.chrome.com/apps/api_index
-// https://developer.chrome.com/apps/storage
-// 
-// JS xmlHTTPRequest, DOM
-// https://developer.mozilla.org/en-US/docs/Web/API/XMLHttpRequest
-// https://developer.mozilla.org/en-US/docs/Web/API/XMLHttpRequest/Using_XMLHttpRequest
-// https://developer.mozilla.org/en-US/docs/Web/API/Document_Object_Model
-// strings: https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String 
-
 var key = "";
 
 
@@ -79,6 +66,38 @@ function loadList(){
 	});
 }
 
+
+// map platforms to domain
+var specGridMap = {"NA1":"spectator.na.lol.riotgames.com:80",
+	"EUW1":"spectator.euw1.lol.riotgames.com:80", 
+	"EUN1":"spectator.eu.lol.riotgames.com:8080", 
+	"KR":"spectator.kr.lol.riotgames.com:80", 
+	"OC1":"spectator.oc1.lol.riotgames.com:80", 
+	"BR1":"spectator.br.lol.riotgames.com:80", 
+	"LA1":"spectator.la1.lol.riotgames.com:80", 
+	"LA2":"spectator.la2.lol.riotgames.com:80", 
+	"RU":"spectator.ru.lol.riotgames.com:80", 
+	"TR1":"spectator.tr.lol.riotgames.com:80", 
+	"PBE1":"spectator.pbe1.lol.riotgames.com:8080"
+};
+
+// https://developer.riotgames.com/docs/spectating-games
+function copySpectatorUrl(matchId, encKey, platform) {
+	if(platform == null)
+		platform = "NA1";
+	var currExe = "\"C:\\Riot Games\\League of Legends\\RADS\\solutions\\lol_game_client_sln\\releases\\0.0.1.79\\deploy\\League of Legends.exe\" ";
+	var constParams = "\"8394\" \"LoLLauncher.exe\" \"\" ";
+	var lastParam = "\"spectator " + specGridMap[platform] + " " + encKey + " " + matchId + " " + platform + "\"";
+
+	var copyElement = document.createElement("textarea");
+	copyElement.textContent = currExe + constParams + lastParam;
+	document.body.appendChild(copyElement);
+	copyElement.select();
+	document.execCommand('copy');
+	document.body.removeChild(copyElement);
+}
+
+
 function setApiKey(){
 	var tempKey = document.getElementById("apiKey").value;
 	var testRequest = {"command" : "test", "testKey" : tempKey};
@@ -111,7 +130,7 @@ function getMatchInfo(pId){
 				var nowTime = (new Date).getTime(); // ms
 				var timeSinceSeen = Math.floor((nowTime - lastSeen) / 1000 / 60); // minutes
 				var target = getMatchInfoCell(document.getElementById(pId));
-				target.innerHTML = "last seen " + Math.floor(timeSinceSeen / 60 / 24) + "d " + Math.floor(timeSinceSeen / 60) + "h " + timeSinceSeen % 60 + "m ago";
+				target.innerHTML = "last seen " + Math.floor(timeSinceSeen / 60 / 24) + "d " + Math.floor((timeSinceSeen / 60) % 24) + "h " + timeSinceSeen % 60 + "m ago";
 			});
 			setMatchInfo("");
 			return;
@@ -152,9 +171,17 @@ function getMatchInfo(pId){
 
 				var target = getMatchInfoCell(document.getElementById(pId));
 				target.innerHTML = lengthString + "<br />" + champName;
-
 				setMatchInfo(JSON.stringify(obj));
-				// 
+
+				var spec = getSpectateCell(document.getElementById(pId));
+				if(spec.hasChildNodes())
+					spec.removeChild(foo.childNodes[0]);
+				var specImage = new Image();
+				specImage.src = "eye.png";
+				specImage.onclick = function(){
+					copySpectatorUrl(obj.gameId, obj.observers.encryptionKey, obj.platformId);
+				};
+				spec.appendChild(specImage);
 			});
 		}
 	});
@@ -231,6 +258,10 @@ function getMatchInfoCell(row) {
 	return row.cells[3];
 }
 
+function getSpectateCell(row) {
+	return row.cells[4];
+}
+
 function moveRowUp(id) {
 	var row = document.getElementById(id);
 	var name = getNameFromRow(row);
@@ -300,6 +331,8 @@ function addPlayerToTable(id, name, index){
 	infoButton.onclick = function() {
 		getMatchInfo(id);
 	}
+
+	row.insertCell(); // for spectate button
 
 
 }

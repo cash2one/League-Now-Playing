@@ -1,8 +1,8 @@
+* fix(?) spectate
 * Add way to check how many friends the person is premade with (is this even possible anymore?)
 	* could check how many other people on this list are in their game, and update their entries as well.
 * format match data string somehow (partly done: masteries and runes omitted)
 	* create readable champion list of ally/enemy team, along with queue type
-	* Add spectate option
 * slow down apiReq so that it is at a max of 1/sec (or 10req/10sec)
 * Add auto updating (something like update 1 entry on the list every 5 seconds or so)
 * make loadList remove current players from list first?
