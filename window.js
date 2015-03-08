@@ -1,6 +1,77 @@
 var key = "";
 
+var LeagueApi = {
 
+	//calls back with player info if success
+	getPlayerInfo: function(playerName, callback) {
+		var query = {"command" : "getPlayerInfo", "playerName": playerName};
+		apiReq(query, function(resp) {
+			if(resp.charAt(0) == '<' || resp == null || resp == false ) // call failed
+				return false;
+
+			var obj = JSON.parse(resp)[playerName]; // {<playername>:{playerinfo}} is how it is laid out
+			if(obj != null)
+				callback(obj);
+		});
+	},
+
+	// calls back with player info if success, otherwise calls back with null
+	getPlayerInfoById: function(playerId, callback) {
+		var query = {"command" : "getPlayerInfoById", "playerId" : playerId};
+		apiReq(query, function(resp) {
+			if(resp.charAt(0) == '<' || resp == null || resp == false ) // call failed
+				callback(null);
+			else
+			{
+				var obj = JSON.parse(resp);
+				if(obj[playerId] != null)
+					callback(obj);
+				else
+					callback(null);
+			}
+		});
+	},
+
+	// rework this so it uses getChampionList
+	getChampion: function(champId, callback) {
+
+	},
+
+
+	champList: {"length":0},
+	// populates champList if it is empty, and callsback with it.
+	getChampionList: function(callback) {
+		var that = this;
+		if(this.champList.length != 0)
+			callback(this.champList);
+		else
+		{
+			var query = {"command" : "getChampionList"};
+			apiReq(query, function (resp) {
+				that.champList.length = 0;
+				var obj = JSON.parse(resp)["data"];
+				for(var key in obj) // for each champion
+				{
+					that.champList[obj[key].id] = key; // set id to map to champion name
+					that.champList.length++;
+				}
+				callback(that.champList);
+			});
+		}
+	},
+
+	// calls back with match info if player is in game. otherwise calls back with nothing (aka null).
+	getCurrentMatch: function(pId, callback) {
+		var query = {"command" : "playerCurrentMatchInfo", "playerId" : pId};
+		apiReq(query, function(resp){
+			if(resp.charAt(0) === '<') // 404 or some error received, usually from not being in game
+				callback();
+			else
+				callback(JSON.parse(resp));
+		});
+	}
+	
+}
 
 
 
@@ -119,76 +190,114 @@ function setApiKey(){
 }
 
 function getMatchInfo(pId){
-	var q1 = {"command" : "playerCurrentMatchInfo", "playerId" : pId};
-	apiReq(q1, function(resp){
-		// debugText(resp);
-		if(resp.charAt(0) === '<') // 404 or some error received, usually from not being in game
+	LeagueApi.getCurrentMatch(pId, function(resp){
+		if(resp == null) // from 404 or some error
 		{
-			var q2 = {"command" : "getPlayerInfoById", "playerId" : pId};
-			apiReq(q2, function(resp2) {
-				var lastSeen = JSON.parse(resp2)[pId].revisionDate; // ms
-				var nowTime = (new Date).getTime(); // ms
-				var timeSinceSeen = Math.floor((nowTime - lastSeen) / 1000 / 60); // minutes
-				var target = getMatchInfoCell(document.getElementById(pId));
-				target.innerHTML = "last seen " + Math.floor(timeSinceSeen / 60 / 24) + "d " + Math.floor((timeSinceSeen / 60) % 24) + "h " + timeSinceSeen % 60 + "m ago";
+			LeagueApi.getPlayerInfoById(pId, function(resp) {
+				if(resp != null)
+				{
+					var lastSeen = resp[pId].revisionDate; // ms
+					var nowTime = (new Date).getTime(); // ms
+					var timeSinceSeen = Math.floor((nowTime - lastSeen) / 1000 / 60); // minutes
+					var target = getMatchInfoCell(document.getElementById(pId));
+					target.innerHTML = "last seen " + Math.floor(timeSinceSeen / 60 / 24) + "d " + Math.floor((timeSinceSeen / 60) % 24) + "h " + timeSinceSeen % 60 + "m ago";
+				}
 			});
-			setMatchInfo("");
+			emptyMatchInfo();
 			return;
 		}
 		else
 		{
-			var obj = JSON.parse(resp);
-			if(obj.participants == null) // then some other error occurred, such as rate limit being exceeded.
+			if(resp.participants == null) // then some other error occurred, such as rate limit being exceeded.
 				return;
 			var champ = 0;
 			var team = 0;
-			for(var i=0; i<obj.participants.length; i++)
+			for(var i=0; i<resp.participants.length; i++)
 			{
-				if(obj.participants[i].summonerId == pId)
+				if(resp.participants[i].summonerId == pId)
 				{
-					champ = obj.participants[i].championId;
-					team = obj.participants[i].team;
+					champ = resp.participants[i].championId;
+					team = resp.participants[i].team;
 				}
-				obj.participants[i].runes = ["omitted"];
-				obj.participants[i].masteries = ["omitted"];
+				resp.participants[i].runes = ["omitted"];
+				resp.participants[i].masteries = ["omitted"];
 			}
 
-			var startTime = obj.gameStartTime;
-			var nowTime = (new Date).getTime();
-			var length = Math.floor((nowTime-startTime) / 1000); // milliseconds
-			if(startTime == 0)
-				length = 0;
-			var lengthString = Math.floor(length / 60) + ":";
-			if(length % 60 < 10)
-				lengthString = lengthString + "0";
-			lengthString = lengthString + length % 60;
-
-			var q2 = {"command" : "championInfoById", "champId" : champ};
-			apiReq(q2, function(resp2){
-				var champName = "<>";
-				if(resp2 != null)
-					champName = JSON.parse(resp2).name;
-
-				var target = getMatchInfoCell(document.getElementById(pId));
-				target.innerHTML = lengthString + "<br />" + champName;
-				setMatchInfo(JSON.stringify(obj));
-
-				var spec = getSpectateCell(document.getElementById(pId));
-				if(spec.hasChildNodes())
-					spec.removeChild(foo.childNodes[0]);
-				var specImage = new Image();
-				specImage.src = "eye.png";
-				specImage.onclick = function(){
-					copySpectatorUrl(obj.gameId, obj.observers.encryptionKey, obj.platformId);
-				};
-				spec.appendChild(specImage);
+			LeagueApi.getChampionList(function(champList){
+				setMatchInfo(resp, champList);
 			});
 		}
 	});
 }
 
-function setMatchInfo(str){
-	document.getElementById("matchInfo").innerHTML= str;
+function setStatus(pId, startTime, championName) {
+	var nowTime = (new Date).getTime();
+	var length = Math.floor((nowTime-startTime) / 1000); // milliseconds
+	if(startTime == 0)
+		length = 0;
+	var lengthString = Math.floor(length / 60) + ":";
+	if(length % 60 < 10)
+		lengthString = lengthString + "0";
+	lengthString = lengthString + length % 60;
+
+	var target = getMatchInfoCell(document.getElementById(pId));
+	target.innerHTML = lengthString + "<br />" + championName;
+}
+
+
+function setSpectatorInfo(pId, gameId, encKey, platformId) {
+	var spec = getSpectateCell(document.getElementById(pId));
+	if(spec.hasChildNodes())
+		spec.removeChild(spec.childNodes[0]);
+	var specImage = new Image();
+	specImage.src = "eye.png";
+	specImage.onclick = function(){
+		copySpectatorUrl(gameId, encKey, platformId);
+	};
+	spec.appendChild(specImage);
+}
+
+function emptyMatchInfo(){
+	document.getElementById("matchInfo").innerHTML= "";
+}
+
+function setMatchInfo(match, championList){
+	var players = { "blue" : [] , "red" : [] };
+	for(var i = 0; i < match.participants.length; i++)
+	{
+		var player = match.participants[i];
+		if(document.getElementById(player.summonerId) != null)
+		{
+			setStatus(player.summonerId, match.gameStartTime, championList[player.championId]);
+			setSpectatorInfo(player.summonerId, match.gameId, match.observers.encryptionKey, match.platformId);
+		}
+
+		if(player.teamId >= 200) // >= is for safety. Only ever seen 200 and 100. 200 is red side
+			players.red.push({ "name" : player.summonerName, "champ" : championList[player.championId] });
+		else
+			players.blue.push({ "name" : player.summonerName, "champ" : championList[player.championId] });
+	}
+
+	var div = document.getElementById("matchInfo");
+	div.innerHTML = "";
+	var tab = document.createElement("table")
+	tab.style = "width:100%";
+	div.appendChild(tab);
+
+	var playerMax = players.blue.length;
+	if(players.red.length > playerMax)
+		playerMax = players.red.length;
+
+	for(var i = 0; i < playerMax; i++)
+	{
+		var row = tab.insertRow(i);
+		var left = row.insertCell(0);
+		var right = row.insertCell(1);
+		if(i < players.blue.length)
+			left.innerHTML = players.blue[i].name + " playing " + players.blue[i].champ;
+		if(i < players.red.length)
+			right.innerHTML = players.red[i].name + " playing " + players.red[i].champ;
+	}
 }
 
 
@@ -215,6 +324,11 @@ function apiReq(query, callback) {
 		query["platform"] = "NA1";
 	switch(query.command)
 	{
+		case "getChampionList":
+			xmlReq("GET", "https://global.api.pvp.net/api/lol/static-data/" + query.region + "/v1.2/champion?champData=info&api_key=" + key, function(resp) {
+				callback(resp);
+			});
+			break;
 		case "playerCurrentMatchInfo":
 			xmlReq("GET", "https://na.api.pvp.net/observer-mode/rest/consumer/getSpectatorGameInfo/" + query["platform"] + "/" + query.playerId + "?api_key=" + key, function(resp){
 				callback(resp);
@@ -345,18 +459,8 @@ function addPlayer(){
 	document.getElementById("playerName").value = "";
 
 	
-	var query = {"command" : "getPlayerInfo", "playerName": playerName};
-	apiReq(query, function(resp) {
-		
-		if(resp.charAt(0) == '<' || resp == null || resp == false ) // call failed
-			return false;
-		
-
-		var obj = JSON.parse(resp)[playerName];
-
-		if(obj == null || obj.id == null) // failed
-			return false;
-		addPlayerToTable(obj.id, obj.name);
+	LeagueApi.getPlayerInfo(playerName, function(resp) {
+		addPlayerToTable(resp.id, resp.name);
 	});
 
 	
