@@ -1,81 +1,3 @@
-var key = "";
-
-var LeagueApi = {
-
-	//calls back with player info if success
-	getPlayerInfo: function(playerName, callback) {
-		var query = {"command" : "getPlayerInfo", "playerName": playerName};
-		apiReq(query, function(resp) {
-			if(resp.charAt(0) == '<' || resp == null || resp == false ) // call failed
-				return false;
-
-			var obj = JSON.parse(resp)[playerName]; // {<playername>:{playerinfo}} is how it is laid out
-			if(obj != null)
-				callback(obj);
-		});
-	},
-
-	// calls back with player info if success, otherwise calls back with null
-	getPlayerInfoById: function(playerId, callback) {
-		var query = {"command" : "getPlayerInfoById", "playerId" : playerId};
-		apiReq(query, function(resp) {
-			if(resp.charAt(0) == '<' || resp == null || resp == false ) // call failed
-				callback(null);
-			else
-			{
-				var obj = JSON.parse(resp);
-				if(obj[playerId] != null)
-					callback(obj);
-				else
-					callback(null);
-			}
-		});
-	},
-
-	// rework this so it uses getChampionList
-	getChampion: function(champId, callback) {
-
-	},
-
-
-	champList: {"length":0},
-	// populates champList if it is empty, and callsback with it.
-	getChampionList: function(callback) {
-		var that = this;
-		if(this.champList.length != 0)
-			callback(this.champList);
-		else
-		{
-			var query = {"command" : "getChampionList"};
-			apiReq(query, function (resp) {
-				that.champList.length = 0;
-				var obj = JSON.parse(resp)["data"];
-				for(var key in obj) // for each champion
-				{
-					that.champList[obj[key].id] = key; // set id to map to champion name
-					that.champList.length++;
-				}
-				callback(that.champList);
-			});
-		}
-	},
-
-	// calls back with match info if player is in game. otherwise calls back with nothing (aka null).
-	getCurrentMatch: function(pId, callback) {
-		var query = {"command" : "playerCurrentMatchInfo", "playerId" : pId};
-		apiReq(query, function(resp){
-			if(resp.charAt(0) === '<') // 404 or some error received, usually from not being in game
-				callback();
-			else
-				callback(JSON.parse(resp));
-		});
-	}
-	
-}
-
-
-
-
 window.onload = function(){
 	document.getElementById("saveListButton").onclick = saveList;
 	document.getElementById("loadListButton").onclick = loadList;
@@ -103,72 +25,27 @@ window.onload = function(){
 			spanNode.style.display = "none";
 		}
 	});
-	
-	
-	
-
 };
 
 function debugText(text){
-	document.body.appendChild(document.createTextNode(text));
+	// document.body.appendChild(document.createTextNode(text));
+	console.log(text);
 }
 
 
-// persist the player list to storage, save the IDs.
-function saveList(){
-	var playerIdList = [];
-	var playerNameList = [];
-	var playerTableRows = document.getElementById("playerTable").rows;
-	for(var i = 1; i < playerTableRows.length; i++) // start at 1 to ignore first row
-	{
-		playerIdList.push(playerTableRows[i].id);
-		playerNameList.push(getNameFromRow(playerTableRows[i]));
-	}
-	chrome.storage.local.set({"playerIds" : playerIdList, "playerNames" : playerNameList});
-}
-
-// persist the player list to storage, save the IDs.
-function loadList(){
-	chrome.storage.local.get(["playerIds", "playerNames"], function(items){
-		var idList = items.playerIds;
-		var nameList = items.playerNames;
-		for(var i = 0; i < idList.length ; i++)
-			addPlayerToTable(idList[i], nameList[i]);
-	});
-}
-
-
-// map platforms to domain
-var specGridMap = {"NA1":"spectator.na.lol.riotgames.com:80",
-	"EUW1":"spectator.euw1.lol.riotgames.com:80", 
-	"EUN1":"spectator.eu.lol.riotgames.com:8080", 
-	"KR":"spectator.kr.lol.riotgames.com:80", 
-	"OC1":"spectator.oc1.lol.riotgames.com:80", 
-	"BR1":"spectator.br.lol.riotgames.com:80", 
-	"LA1":"spectator.la1.lol.riotgames.com:80", 
-	"LA2":"spectator.la2.lol.riotgames.com:80", 
-	"RU":"spectator.ru.lol.riotgames.com:80", 
-	"TR1":"spectator.tr.lol.riotgames.com:80", 
-	"PBE1":"spectator.pbe1.lol.riotgames.com:8080"
-};
 
 // https://developer.riotgames.com/docs/spectating-games
 function copySpectatorUrl(matchId, encKey, platform) {
-	if(platform == null)
-		platform = "NA1";
-	var currExe = "\"C:\\Riot Games\\League of Legends\\RADS\\solutions\\lol_game_client_sln\\releases\\0.0.1.79\\deploy\\League of Legends.exe\" ";
-	var constParams = "\"8394\" \"LoLLauncher.exe\" \"\" ";
-	var lastParam = "\"spectator " + specGridMap[platform] + " " + encKey + " " + matchId + " " + platform + "\"";
 
 	var copyElement = document.createElement("textarea");
-	copyElement.textContent = currExe + constParams + lastParam;
+	copyElement.textContent = LeagueApi.generateSpectatorString(matchId, encKey, platform);
 	document.body.appendChild(copyElement);
 	copyElement.select();
 	document.execCommand('copy');
 	document.body.removeChild(copyElement);
 }
 
-
+// TODO1:
 function setApiKey(){
 	var tempKey = document.getElementById("apiKey").value;
 	var testRequest = {"command" : "test", "testKey" : tempKey};
@@ -257,10 +134,14 @@ function setSpectatorInfo(pId, gameId, encKey, platformId) {
 	spec.appendChild(specImage);
 }
 
+
+
+
+
 function emptyMatchInfo(){
 	document.getElementById("matchInfo").innerHTML= "";
 }
-
+// fill the matchInfo div with a table that describes the match.
 function setMatchInfo(match, championList){
 	var players = { "blue" : [] , "red" : [] };
 	for(var i = 0; i < match.participants.length; i++)
@@ -279,7 +160,11 @@ function setMatchInfo(match, championList){
 	}
 
 	var div = document.getElementById("matchInfo");
-	div.innerHTML = "";
+	emptyMatchInfo();
+	var matchDescription = document.createElement("span");
+	matchDescription.innerHTML = match.gameType + " of " + match.gameMode + " on " + LeagueApi.getMap(match.mapId);
+	div.appendChild(matchDescription);
+	div.appendChild(document.createElement("br"));
 	var tab = document.createElement("table")
 	tab.style = "width:100%";
 	div.appendChild(tab);
@@ -310,146 +195,6 @@ function xmlReq(method, url, callback){
 	req.send();
 }
 
-function apiReq(query, callback) {
-	if(callback == null && query.callback != null)
-		callback = query.callback(); // callback can be set in query object or in this function call.
-	else if(callback == null && query.callback == null)
-		callback = function(resp) {return;}; // do nothing if no callback
-
-	if(query == null)
-		return false;
-	if(query.region == null)
-		query.region = "na";
-	if(query["platform"] == null)
-		query["platform"] = "NA1";
-	switch(query.command)
-	{
-		case "getChampionList":
-			xmlReq("GET", "https://global.api.pvp.net/api/lol/static-data/" + query.region + "/v1.2/champion?champData=info&api_key=" + key, function(resp) {
-				callback(resp);
-			});
-			break;
-		case "playerCurrentMatchInfo":
-			xmlReq("GET", "https://na.api.pvp.net/observer-mode/rest/consumer/getSpectatorGameInfo/" + query["platform"] + "/" + query.playerId + "?api_key=" + key, function(resp){
-				callback(resp);
-			});
-			break;
-		case "championInfoById":
-			xmlReq("GET", "https://global.api.pvp.net/api/lol/static-data/" + query.region + "/v1.2/champion/" + query.champId + "?champData=info&api_key=" + key, function(resp) {
-				callback(resp);
-			});
-			break;
-		case "getPlayerInfo":
-			xmlReq("GET", "https://na.api.pvp.net/api/lol/" + query.region + "/v1.4/summoner/by-name/" + query.playerName + "?api_key=" + key, function(resp){
-				callback(resp);
-			});
-			break;
-		case "getPlayerInfoById":
-			xmlReq("GET", "https://na.api.pvp.net/api/lol/" + query.region + "/v1.4/summoner/" + query.playerId + "?api_key=" + key, function(resp){
-				callback(resp);
-			});
-			break;
-		case "test":
-			xmlReq("GET", "https://na.api.pvp.net/api/lol/na/v1.4/summoner/by-name/RiotSchmick?api_key=" + query.testKey, function(resp){
-				var obj = JSON.parse(resp);
-				if(obj != null && obj["riotschmick"] != null)
-					callback(true);
-				else
-					callback(false);
-			});
-			break;
-		default:
-			break;
-	}
-	
-}
-
-function getNameFromRow(row) {
-	return row.cells[1].innerHTML;
-}
-
-function getMatchInfoCell(row) {
-	return row.cells[3];
-}
-
-function getSpectateCell(row) {
-	return row.cells[4];
-}
-
-function moveRowUp(id) {
-	var row = document.getElementById(id);
-	var name = getNameFromRow(row);
-	var startIndex = row.rowIndex;
-	if(startIndex == 1) // at top (just under heading)
-		return;
-	var prevNode = row.previousSibling;
-	row.parentNode.insertBefore(row, prevNode);
-}
-
-function moveRowDown(id) {
-	var row = document.getElementById(id);
-	var name = getNameFromRow(row);
-	var nextNode = row.nextSibling;
-	if(nextNode == null) // at bottom already
-		return;
-	row.parentNode.insertBefore(row, nextNode.nextSibling); // equivalent of insertAfter(row, nextNode)
-	
-}
-
-function removeRow(id) {
-	var row = document.getElementById(id);
-	row.parentNode.removeChild(row);
-}
-
-function addPlayerToTable(id, name, index){
-	if(document.getElementById(id) != null)
-		return;
-	var tab = document.getElementById("playerTable");
-
-	if(index == null)
-		index = -1;
-	if(index > tab.rows.length) // would fail by being over limit
-		index = tab.rows.length; // set to last element
-	var row = tab.insertRow(index);
-	row.id = id;
-
-	var moveCell = row.insertCell();
-		var up = new Image();
-		up.src = 'upArrow.png';
-		up.alt = 'Move Row Up';
-		up.onclick = function() {moveRowUp(id);};
-		
-
-		var down = new Image();
-		down.src = 'downArrow.png';
-		down.alt = 'Move Row Down';
-		down.onclick = function() {moveRowDown(id);};
-		
-		var remove = new Image();
-		remove.src = 'x.png';
-		remove.alt = 'Remove Row';
-		remove.onclick = function() {removeRow(id);};
-
-		moveCell.appendChild(up);
-		moveCell.appendChild(down);
-		moveCell.appendChild(remove);
-
-	var nameCell = row.insertCell();
-	nameCell.innerHTML = name;
-
-	var idCell = row.insertCell();
-	idCell.innerHTML = id;
-
-	var infoButton = row.insertCell();
-	infoButton.innerHTML = "Get Match Info";
-	infoButton.onclick = function() {
-		getMatchInfo(id);
-	}
-
-	row.insertCell(); // for spectate button
-
-
-}
 
 function addPlayer(){
 	var playerName = document.getElementById("playerName").value;
@@ -462,9 +207,6 @@ function addPlayer(){
 	LeagueApi.getPlayerInfo(playerName, function(resp) {
 		addPlayerToTable(resp.id, resp.name);
 	});
-
-	
-
 	return false;
 }
 

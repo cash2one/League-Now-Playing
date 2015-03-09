@@ -1,7 +1,11 @@
 * fix(?) spectate
 * further format match string to include banned champs,
 	* move spectate option near it maybe
-	* game mode/map display
+
+* (TODO1)
+	* factor out test request, with key as parameter, to LeagueApi
+* Allow using regions other than NA
+* Allow looking at and analysing past games
 
 * limit apiReq so that it is at a max of 1/sec (or 10req/10sec)
 * Add auto updating (something like update 1 entry on the list every 5 seconds or so)
