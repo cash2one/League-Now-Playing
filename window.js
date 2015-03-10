@@ -107,6 +107,51 @@ function getMatchInfo(pId){
 	});
 }
 
+function getHistory(pId){
+	LeagueApi.getRecentMatches(pId, function(resp){
+		LeagueApi.getChampionList(function(championList){
+			if(resp == null) // from 404 or some error
+				return;
+
+			for(var i = 0; i < resp.length; i++)
+			{
+				for(var j = 0; j < resp[i].fellowPlayers.length; j++)
+				{
+					var player = resp[i].fellowPlayers[j];
+					var row = document.getElementById(player.summonerId);
+					if(row != null)
+						player.name = getNameFromRow(row);
+					player.championId = championList[player.championId];
+				}
+				resp[i].championId = championList[resp[i].championId];
+				resp[i].mapId = LeagueApi.getMap(resp[i].mapId);
+			}
+			var string = JSON.stringify(resp);
+			while(string.indexOf(",") >= 0)
+			{
+				string = string.replace(",", "<br />");
+				// string = string.replace("\n", "&nbsp");
+			}
+			while(string.indexOf("{") >= 0)
+			{
+				string = string.replace("{", "_<br />");
+				// string = string.replace("\n", "&nbsp");
+			}
+
+			var parent = document.getElementById(pId);
+			var floaty = document.createElement("div");
+			floaty.innerHTML = string;
+			floaty.style.position = "absolute";
+			floaty.style.top = parent.offsetTop + 2*parent.offsetHeight;
+			floaty.style.left = parent.offsetLeft + (parent.offsetWidth * 0.30);
+			floaty.style.width = parent.offsetWidth * .7;
+			floaty.style.border = "3px solid black";
+			floaty.style.backgroundColor = "lightgray";
+			parent.appendChild(floaty);
+		});
+	});
+}
+
 function setStatus(pId, startTime, championName) {
 	var nowTime = (new Date).getTime();
 	var length = Math.floor((nowTime-startTime) / 1000); // milliseconds

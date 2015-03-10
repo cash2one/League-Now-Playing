@@ -34,6 +34,7 @@ var LeagueApi = {
 		return this.specGridMap[platform];
 	},
 
+
 	generatepSectatorString: function(matchId, encKey, platform){
 		if(platform == null)
 			platform = "NA1";
@@ -42,6 +43,26 @@ var LeagueApi = {
 		var constParams = "\"8394\" \"LoLLauncher.exe\" \"\""; // <"8394" "LoLLauncher.exe" "">
 		var lastParam = "\"spectator " + this.getSpecGrid(platform) + " " + encKey + " " + matchId + " " + platform + "\"";
 		return currExe + " " + constParams + " " + lastParam;
+	},
+
+	// callbacks with an array of 10 most recent games, or null if failure
+	getRecentMatches: function(playerId, callback){
+		var query = {"command" : "getRecentMatches", "playerId": playerId};	
+		apiReq(query, function(resp) {
+			if(resp.charAt(0) == '<' || resp == null || resp == false ) // call failed?
+			{
+				callback(null);
+				return;
+			}
+			var obj = JSON.parse(resp);
+			if(obj.summonerId != playerId)
+			{
+				callback(null);
+				return;
+			}
+			var games = obj.games;
+			callback(games);
+		});
 	},
 
 	//calls back with player info if success
@@ -151,6 +172,11 @@ function apiReq(query, callback) {
 			break;
 		case "getPlayerInfoById":
 			xmlReq("GET", "https://na.api.pvp.net/api/lol/" + query.region + "/v1.4/summoner/" + query.playerId + "?api_key=" + key, function(resp){
+				callback(resp);
+			});
+			break;
+		case "getRecentMatches":
+			xmlReq("GET", "https://na.api.pvp.net/api/lol/" + query.region + "/v1.3/game/by-summoner/" + query.playerId + "/recent?api_key=" + key, function(resp){
 				callback(resp);
 			});
 			break;

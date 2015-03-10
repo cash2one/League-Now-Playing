@@ -95,6 +95,12 @@ function addPlayerToTable(id, name, index){
 		getMatchInfo(id);
 	}
 
+	var historyButton = row.insertCell();
+	historyButton.innerHTML = "View History";
+	historyButton.onclick = function() {
+		getHistory(id);
+	}
+
 	row.insertCell(); // for spectate button
 
 
@@ -106,10 +112,18 @@ function getNameFromRow(row) {
 	return row.cells[1].innerHTML;
 }
 
+function getIdCell(row) {
+	return row.cells[2];
+}
+
 function getMatchInfoCell(row) {
 	return row.cells[3];
 }
 
-function getSpectateCell(row) {
+function getHistoryCell(row) {
 	return row.cells[4];
+}
+
+function getSpectateCell(row) {
+	return row.cells[5];
 }
