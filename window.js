@@ -107,47 +107,120 @@ function getMatchInfo(pId){
 	});
 }
 
+
+var popupArray = [];
 function getHistory(pId){
 	LeagueApi.getRecentMatches(pId, function(resp){
 		LeagueApi.getChampionList(function(championList){
-			if(resp == null) // from 404 or some error
-				return;
+			LeagueApi.getItemList(function(itemList){
+				if(resp == null) // from 404 or some error
+					return;
 
-			for(var i = 0; i < resp.length; i++)
-			{
-				for(var j = 0; j < resp[i].fellowPlayers.length; j++)
+				var parent = document.getElementById(pId);
+
+				for(var i = 0; i < resp.length; i++)
 				{
-					var player = resp[i].fellowPlayers[j];
-					var row = document.getElementById(player.summonerId);
-					if(row != null)
-						player.name = getNameFromRow(row);
-					player.championId = championList[player.championId];
+					if(resp[i].fellowPlayers != null) // if solo in custom, no fellow players exist
+					{
+						for(var j = 0; j < resp[i].fellowPlayers.length; j++)
+						{
+							var player = resp[i].fellowPlayers[j];
+							var row = document.getElementById(player.summonerId);
+							if(row != null)
+								player.name = getNameFromRow(row);
+							player.championId = championList[player.championId];
+						}
+						if(resp[i].teamId == 100) // show same team as player first
+							resp[i].fellowPlayers.sort(function(a, b) {
+								var af = a.teamId;
+								var bf = b.teamId;
+								if(a.name != null)
+									af -= 50;
+								if(b.name != null)
+									bf -= 50;
+								return af - bf;
+							});
+						else
+							resp[i].fellowPlayers.sort(function(b, a) {
+								var af = a.teamId;
+								var bf = b.teamId;
+								if(a.name != null)
+									af += 50;
+								if(b.name != null)
+									bf += 50;
+								return af - bf;
+							});
+					}
+					for(var j = 0; j < 7; j++)
+					{
+						if(resp[i].stats["item" + j] != null)
+							resp[i].stats["item" + j] = itemList[resp[i].stats["item" + j]].name;
+					}
+					resp[i].championId = championList[resp[i].championId];
+					resp[i].mapId = LeagueApi.getMap(resp[i].mapId);
 				}
-				resp[i].championId = championList[resp[i].championId];
-				resp[i].mapId = LeagueApi.getMap(resp[i].mapId);
-			}
-			var string = JSON.stringify(resp);
-			while(string.indexOf(",") >= 0)
-			{
-				string = string.replace(",", "<br />");
-				// string = string.replace("\n", "&nbsp");
-			}
-			while(string.indexOf("{") >= 0)
-			{
-				string = string.replace("{", "_<br />");
-				// string = string.replace("\n", "&nbsp");
-			}
 
-			var parent = document.getElementById(pId);
-			var floaty = document.createElement("div");
-			floaty.innerHTML = string;
-			floaty.style.position = "absolute";
-			floaty.style.top = parent.offsetTop + 2*parent.offsetHeight;
-			floaty.style.left = parent.offsetLeft + (parent.offsetWidth * 0.30);
-			floaty.style.width = parent.offsetWidth * .7;
-			floaty.style.border = "3px solid black";
-			floaty.style.backgroundColor = "lightgray";
-			parent.appendChild(floaty);
+
+				
+				for(var i = 0; i < resp.length; i++)
+				{
+					if(popupArray[i] != null) // if popup already displayed
+						popupArray[i].parentNode.removeChild(popupArray[i]);
+
+					var matchDiv = document.createElement("div");
+					parent.appendChild(matchDiv);
+					popupArray[i] = matchDiv;
+
+					var buttons = document.createElement("div");
+					matchDiv.appendChild(buttons);
+						var prevB = document.createElement("button");
+						// prevB.type = "button";
+						prevB.data = i;
+						prevB.innerHTML = "prev";
+						if(i > 0)
+							prevB.onclick = function() {
+								popupArray[this.data].style.display = "none";
+								popupArray[this.data-1].style.display = "inherit";
+						};
+						buttons.appendChild(prevB);
+						var nextB = document.createElement("button");
+						// nextB.type = "button";
+						nextB.data = i;
+						nextB.innerHTML = "next";
+						if(i + 1 < resp.length)
+							nextB.onclick = function() {
+								popupArray[this.data].style.display = "none";
+								popupArray[this.data+1].style.display = "inherit";
+						};
+						buttons.appendChild(nextB);
+						var closeB = document.createElement("button");
+						// closeB.type = "button";
+						closeB.innerHTML = "close";
+						closeB.onclick = function() {
+							for(var i = 0; i < popupArray.length; i++)
+							{
+								popupArray[i].parentNode.removeChild(popupArray[i]);
+								popupArray[i] = null;
+							}
+						};
+						buttons.appendChild(closeB);
+
+					var matchDivStr = document.createElement("pre");
+					matchDivStr.innerHTML = JSON.stringify(resp[i], null, "\t");
+					matchDiv.appendChild(matchDivStr);
+
+					matchDiv.style.position = "absolute";
+					matchDiv.style.display = "none";
+					matchDiv.style.top = parent.offsetTop + 2*parent.offsetHeight;
+					matchDiv.style.left = parent.offsetLeft + (parent.offsetWidth * 0.30);
+					matchDiv.style.width = parent.offsetWidth * .7;
+					matchDiv.style.border = "3px solid black";
+					matchDiv.style.backgroundColor = "lightgray";
+
+				}
+
+				popupArray[0].style.display = "inherit";
+			});
 		});
 	});
 }

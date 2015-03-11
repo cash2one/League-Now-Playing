@@ -95,10 +95,30 @@ var LeagueApi = {
 		});
 	},
 
-	// rework this so it uses getChampionList
-	getChampion: function(champId, callback) {
 
+	// itemList has objects of key = id, value = {id, description, name, group}
+	itemList: {"length":0},
+	// populates itemList if it is empty, and callsback with it.
+	getItemList: function(callback) {
+		var that = this;
+		if(this.itemList.length != 0)
+			callback(this.itemList);
+		else
+		{
+			var query = {"command" : "getItemList"};
+			apiReq(query, function (resp) {
+				that.itemList.length = 0;
+				var obj = JSON.parse(resp)["data"];
+				for(var key in obj) // for each champion
+				{
+					that.itemList[key] = obj[key]; // set id to map to item info.
+					that.itemList.length++;
+				}
+				callback(that.itemList);
+			});
+		}
 	},
+
 
 
 	champList: {"length":0},
@@ -152,6 +172,11 @@ function apiReq(query, callback) {
 	{
 		case "getChampionList":
 			xmlReq("GET", "https://global.api.pvp.net/api/lol/static-data/" + query.region + "/v1.2/champion?champData=info&api_key=" + key, function(resp) {
+				callback(resp);
+			});
+			break;
+		case "getItemList":
+			xmlReq("GET", "https://global.api.pvp.net/api/lol/static-data/" + query.region + "/v1.2/item?api_key=" + key, function(resp) {
 				callback(resp);
 			});
 			break;

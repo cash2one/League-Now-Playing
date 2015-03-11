@@ -5,10 +5,6 @@
 * (TODO1)
 	* factor out test request, with key as parameter, to LeagueApi
 * Allow using regions other than NA
-* Allow analysing past games
-* TODO figure out what to do with history string. <pre> tag might help. Also:
-	* Maybe let user tab through different matches, to see 1 at a time.
-	* The popup window needs to be closeable
 
 * CSS in its own file, or inline in window.html. Use classes to style parts a time.
 
