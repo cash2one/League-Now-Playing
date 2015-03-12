@@ -34,8 +34,12 @@ var LeagueApi = {
 		return this.specGridMap[platform];
 	},
 
+	getChampPortraitUrl: function(championName){
+		return "http://ddragon.leagueoflegends.com/cdn/5.2.1/img/champion/" + championName + ".png";
+	},
 
-	generatepSectatorString: function(matchId, encKey, platform){
+
+	generateSectatorString: function(matchId, encKey, platform){
 		if(platform == null)
 			platform = "NA1";
 	

@@ -285,6 +285,7 @@ function setMatchInfo(match, championList){
 	div.appendChild(document.createElement("br"));
 	var tab = document.createElement("table")
 	tab.style = "width:100%";
+	tab.id = "matchInfoTable";
 	div.appendChild(tab);
 
 	var playerMax = players.blue.length;
@@ -297,11 +298,32 @@ function setMatchInfo(match, championList){
 		var left = row.insertCell(0);
 		var right = row.insertCell(1);
 		if(i < players.blue.length)
-			left.innerHTML = players.blue[i].name + " playing " + players.blue[i].champ;
+		{
+			var span = document.createElement("span");
+			span.innerHTML = players.blue[i].name;
+			left.appendChild(span);
+			setImage(left, players.blue[i].champ);
+		}
 		if(i < players.red.length)
-			right.innerHTML = players.red[i].name + " playing " + players.red[i].champ;
+		{
+			var span = document.createElement("span");
+			span.innerHTML = players.red[i].name;
+			right.appendChild(span);
+			setImage(right, players.red[i].champ);
+		}
 	}
 }
+
+function setImage(cell, champion) {
+	xmlReqAsBlob("GET", LeagueApi.getChampPortraitUrl(champion), function(result) {
+		var champImg = new Image();
+		champImg.src = window.URL.createObjectURL(result);
+		cell.insertBefore(champImg, cell.children[0]);
+		champImg.setAttribute("width", "50");
+		champImg.setAttribute("height", "50");
+	});
+}
+
 
 
 function xmlReq(method, url, callback){
@@ -313,6 +335,15 @@ function xmlReq(method, url, callback){
 	req.send();
 }
 
+function xmlReqAsBlob(method, url, callback){
+	var req = new XMLHttpRequest();
+	req.open(method, url);
+	req.responseType = 'blob';
+	req.onload = function() {
+		callback(req.response);
+	}
+	req.send();
+}
 
 function addPlayer(){
 	var playerName = document.getElementById("playerName").value;
