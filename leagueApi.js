@@ -17,6 +17,7 @@ var LeagueApi = {
 		return this.mapsById[mapId];
 	},
 
+
 	// mapId : Name
 	specGridMap: {"NA1":"spectator.na.lol.riotgames.com:80",
 		"EUW1":"spectator.euw1.lol.riotgames.com:80", 
@@ -37,6 +38,10 @@ var LeagueApi = {
 	getChampPortraitUrl: function(championName){
 		return "http://ddragon.leagueoflegends.com/cdn/5.2.1/img/champion/" + championName + ".png";
 	},
+	getSpellPortraitUrl: function(spellKey){
+		return "http://ddragon.leagueoflegends.com/cdn/5.2.1/img/spell/" + spellKey + ".png";
+	},
+
 
 
 	generateSectatorString: function(matchId, encKey, platform){
@@ -113,7 +118,7 @@ var LeagueApi = {
 			apiReq(query, function (resp) {
 				that.itemList.length = 0;
 				var obj = JSON.parse(resp)["data"];
-				for(var key in obj) // for each champion
+				for(var key in obj) // for each item
 				{
 					that.itemList[key] = obj[key]; // set id to map to item info.
 					that.itemList.length++;
@@ -143,6 +148,34 @@ var LeagueApi = {
 					that.champList.length++;
 				}
 				callback(that.champList);
+			});
+		}
+	},
+
+	spellNameList: {"length":0},
+	spellKeyList: {"length":0},
+	// populates spellNameList and spellKeyList with summoner spells if they are empty, and callsback with them.
+	getSpellList: function(callback) {
+		var that = this;
+		if(this.spellNameList.length != 0)
+			callback(this.spellNameList, this.spellKeyList);
+		else
+		{
+			var query = {"command" : "getspellNameList"};
+			apiReq(query, function (resp) {
+				that.spellNameList.length = 0;
+				that.spellKeyList.length = 0;
+				var obj = JSON.parse(resp)["data"];
+				for(var key in obj) // for each spell
+				{
+					if(obj[key].id == null) // skip if it doesn't have an id
+						continue;
+					that.spellNameList[obj[key].id] = obj[key].name; // set id to map to spell name
+					that.spellNameList.length++;
+					that.spellKeyList[obj[key].id] = obj[key].key; // set id to map to spell key
+					that.spellKeyList.length++;
+				}
+				callback(that.spellNameList, that.spellKeyList);
 			});
 		}
 	},
@@ -184,6 +217,11 @@ function apiReq(query, callback) {
 				callback(resp);
 			});
 			break;
+		case "getspellNameList":
+			xmlReq("GET", "https://global.api.pvp.net/api/lol/static-data/" + query.region + "/v1.2/summoner-spell?spellData=key&api_key=" + key, function(resp) {
+				callback(resp);
+			});
+			break;
 		case "playerCurrentMatchInfo":
 			xmlReq("GET", "https://na.api.pvp.net/observer-mode/rest/consumer/getSpectatorGameInfo/" + query["platform"] + "/" + query.playerId + "?api_key=" + key, function(resp){
 				callback(resp);
@@ -219,6 +257,7 @@ function apiReq(query, callback) {
 			});
 			break;
 		default:
+			console.log("LeagueApi command " + query.command + " not found");
 			break;
 	}
 	
