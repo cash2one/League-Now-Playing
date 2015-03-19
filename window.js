@@ -278,9 +278,9 @@ function setMatchInfo(match, championList, spellKeyList){
 		}
 
 		if(player.teamId >= 200) // >= is for safety. Only ever seen 200 and 100. 200 is red side
-			players.red.push({ "name" : player.summonerName, "champ" : championList[player.championId], "spell1" : spellKeyList[player.spell1Id], "spell2" : spellKeyList[player.spell2Id] });
+			players.red.push( { "name" : player.summonerName, "id": player.summonerId, "champ" : championList[player.championId], "spell1" : spellKeyList[player.spell1Id], "spell2" : spellKeyList[player.spell2Id] });
 		else
-			players.blue.push({ "name" : player.summonerName, "champ" : championList[player.championId], "spell1" : spellKeyList[player.spell1Id], "spell2" : spellKeyList[player.spell2Id] });
+			players.blue.push({ "name" : player.summonerName, "id": player.summonerId, "champ" : championList[player.championId], "spell1" : spellKeyList[player.spell1Id], "spell2" : spellKeyList[player.spell2Id] });
 	}
 
 	var div = document.getElementById("matchInfo");
@@ -309,7 +309,10 @@ function setMatchInfo(match, championList, spellKeyList){
 			populatePlayerCell(right, players.red[i], "left");
 	}
 }
+
 function populatePlayerCell(cell, player, float) {
+	appendAddButton(cell, player);
+
 	var span = document.createElement("span");
 	cell.appendChild(span);
 	span.innerHTML = player.name;
@@ -331,8 +334,19 @@ function populatePlayerCell(cell, player, float) {
 	setSpellIcon(cell, "spell1", player.spell1);
 	setSpellIcon(cell, "spell2", player.spell2);
 	setChampionIcon(cell, "champ", player.champ);
-
+	
 }
+
+function appendAddButton(cell, player) {
+	var but = document.createElement("button");
+	but.innerHTML = "+";
+	but.onclick = function() {
+		addPlayerToTable(player.id, player.name)
+	};
+	cell.appendChild(but);
+}
+
+
 // puts the <champion>'s icon in <cell>'s child that has <className> className
 function setChampionIcon(cell, className, champion) {
 	xmlReqAsBlob("GET", LeagueApi.getChampPortraitUrl(champion), function(result) {
