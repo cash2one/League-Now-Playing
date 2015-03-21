@@ -44,7 +44,7 @@ var LeagueApi = {
 
 
 
-	generateSectatorString: function(matchId, encKey, platform){
+	generateSpectatorString: function(matchId, encKey, platform){
 		if(platform == null)
 			platform = "NA1";
 	

@@ -1,4 +1,6 @@
-* fix(?) spectate
+* fix spectator string
+
+
 * further format match string to include banned champs,
 	* move spectate option near it maybe
 
