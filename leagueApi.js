@@ -2,6 +2,37 @@ var key = "";
 
 var LeagueApi = {
 
+	callQueue: {"head": null,
+		"tail": null
+	},
+
+	startApiCalls: function() {
+		setInterval(this.callQueueFront, 1000); // 1 request per second
+	},
+
+	callQueueFront: function() {
+		var curr = this.callQueue.head;
+		if(curr == null) // nothing in queue
+			return;
+		this.callQueue.head = curr.next;
+
+		apiReq(curr.req, curr.callback);
+	},
+
+	addToQueue: function(request, callback) {
+		var node = {"req":request, "callback":callback};
+		if(this.head == null)
+		{
+			this.callQueue.head = node;
+			this.callQueue.tail = node;
+		}
+		else
+		{
+			this.callQueue.tail.next = node; // add to end of list
+			this.callQueue.tail = node; // update tail
+		}
+	},
+
 	// mapId : Name
 	mapsById: {1: "Summoner's Rift",
 		2:	"Summoner's Rift",
@@ -54,10 +85,14 @@ var LeagueApi = {
 		return currExe + " " + constParams + " " + lastParam;
 	},
 
+
 	// callbacks with an array of 10 most recent games, or null if failure
-	getRecentMatches: function(playerId, callback){
-		var query = {"command" : "getRecentMatches", "playerId": playerId};	
-		apiReq(query, function(resp) {
+	getRecentMatches: function(playerId, callback, queue) {
+		var query = {"command" : "getRecentMatches", "playerId": playerId};
+
+		var func = (queue) ? this.addToQueue : apiReq;
+
+		func(query, function(resp) {
 			if(resp.charAt(0) == '<' || resp == null || resp == false ) // call failed?
 			{
 				callback(null);
@@ -74,10 +109,14 @@ var LeagueApi = {
 		});
 	},
 
+
+
 	//calls back with player info if success
-	getPlayerInfo: function(playerName, callback) {
+	getPlayerInfo: function(playerName, callback, queue) {
 		var query = {"command" : "getPlayerInfo", "playerName": playerName};
-		apiReq(query, function(resp) {
+		var func = (queue) ? this.addToQueue : apiReq;
+
+		func(query, function(resp) {
 			if(resp.charAt(0) == '<' || resp == null || resp == false ) // call failed
 				return false;
 
@@ -87,10 +126,13 @@ var LeagueApi = {
 		});
 	},
 
+
 	// calls back with player info if success, otherwise calls back with null
-	getPlayerInfoById: function(playerId, callback) {
+	getPlayerInfoById: function(playerId, callback, queue) {
 		var query = {"command" : "getPlayerInfoById", "playerId" : playerId};
-		apiReq(query, function(resp) {
+		var func = (queue) ? this.addToQueue : apiReq;
+
+		func(query, function(resp) {
 			if(resp.charAt(0) == '<' || resp == null || resp == false ) // call failed
 				callback(null);
 			else
@@ -108,14 +150,17 @@ var LeagueApi = {
 	// itemList has objects of key = id, value = {id, description, name, group}
 	itemList: {"length":0},
 	// populates itemList if it is empty, and callsback with it.
-	getItemList: function(callback) {
+	// will only be queued if (queue == true && itemList is not already populated)
+	getItemList: function(callback, queue) {
 		var that = this;
 		if(this.itemList.length != 0)
 			callback(this.itemList);
 		else
 		{
 			var query = {"command" : "getItemList"};
-			apiReq(query, function (resp) {
+			var func = (queue) ? this.addToQueue : apiReq;
+
+			func(query, function (resp) {
 				that.itemList.length = 0;
 				var obj = JSON.parse(resp)["data"];
 				for(var key in obj) // for each item
@@ -132,14 +177,17 @@ var LeagueApi = {
 
 	champList: {"length":0},
 	// populates champList if it is empty, and callsback with it.
-	getChampionList: function(callback) {
+	// will only be queued if (queue == true && champList is not already populated)
+	getChampionList: function(callback, queue) {
 		var that = this;
 		if(this.champList.length != 0)
 			callback(this.champList);
 		else
 		{
 			var query = {"command" : "getChampionList"};
-			apiReq(query, function (resp) {
+			var func = (queue) ? this.addToQueue : apiReq;
+
+			func(query, function (resp) {
 				that.champList.length = 0;
 				var obj = JSON.parse(resp)["data"];
 				for(var key in obj) // for each champion
@@ -155,14 +203,17 @@ var LeagueApi = {
 	spellNameList: {"length":0},
 	spellKeyList: {"length":0},
 	// populates spellNameList and spellKeyList with summoner spells if they are empty, and callsback with them.
-	getSpellList: function(callback) {
+	// will only be queued if (queue == true && spellLists are not already populated)
+	getSpellList: function(callback, queue) {
 		var that = this;
 		if(this.spellNameList.length != 0)
 			callback(this.spellNameList, this.spellKeyList);
 		else
 		{
 			var query = {"command" : "getspellNameList"};
-			apiReq(query, function (resp) {
+			var func = (queue) ? this.addToQueue : apiReq;
+
+			func(query, function (resp) {
 				that.spellNameList.length = 0;
 				that.spellKeyList.length = 0;
 				var obj = JSON.parse(resp)["data"];
@@ -181,9 +232,11 @@ var LeagueApi = {
 	},
 
 	// calls back with match info if player is in game. otherwise calls back with nothing (aka null).
-	getCurrentMatch: function(pId, callback) {
+	getCurrentMatch: function(pId, callback, queue) {
 		var query = {"command" : "playerCurrentMatchInfo", "playerId" : pId};
-		apiReq(query, function(resp){
+		var func = (queue) ? this.addToQueue : apiReq;
+
+		func(query, function(resp){
 			if(resp.charAt(0) === '<') // 404 or some error received, usually from not being in game
 				callback();
 			else
