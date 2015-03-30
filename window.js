@@ -48,8 +48,7 @@ function copySpectatorUrl(matchId, encKey, platform) {
 // TODO1:
 function setApiKey(){
 	var tempKey = document.getElementById("apiKey").value;
-	var testRequest = {"command" : "test", "testKey" : tempKey};
-	apiReq(testRequest, function(success) {
+	LeagueApi.testApiKey(tempKey, function(success) {
 		var spanNode = document.getElementById("apiSpan");
 		if(success)
 		{
@@ -214,14 +213,11 @@ function getHistory(pId){
 						matchDivStr.innerHTML = JSON.stringify(resp[i], null, "\t");
 						matchDiv.appendChild(matchDivStr);
 
-						matchDiv.style.position = "absolute";
-						matchDiv.style.display = "none";
+						matchDiv.setAttribute("class", "matchHistory");
+
 						matchDiv.style.top = parent.offsetTop + 2*parent.offsetHeight;
 						matchDiv.style.left = parent.offsetLeft + (parent.offsetWidth * 0.30);
 						matchDiv.style.width = parent.offsetWidth * .7;
-						matchDiv.style.border = "3px solid black";
-						matchDiv.style.backgroundColor = "lightgray";
-
 					}
 
 					popupArray[0].style.display = "inherit";
@@ -289,8 +285,7 @@ function setMatchInfo(match, championList, spellKeyList){
 	matchDescription.innerHTML = match.gameType + " of " + match.gameMode + " on " + LeagueApi.getMap(match.mapId);
 	div.appendChild(matchDescription);
 	div.appendChild(document.createElement("br"));
-	var tab = document.createElement("table")
-	tab.style = "width:100%";
+	var tab = document.createElement("table");
 	tab.id = "matchInfoTable";
 	div.appendChild(tab);
 
@@ -310,7 +305,7 @@ function setMatchInfo(match, championList, spellKeyList){
 	}
 }
 
-function populatePlayerCell(cell, player, float) {
+function populatePlayerCell(cell, player, floatParam) {
 	appendAddButton(cell, player);
 
 	var span = document.createElement("span");
@@ -319,11 +314,11 @@ function populatePlayerCell(cell, player, float) {
 	var champImg = new Image();
 	cell.appendChild(champImg);
 	champImg.setAttribute("class", "champ");
-	champImg.style.float = float;
+	champImg.style.float = floatParam;
 
 	var spelldiv = document.createElement("div");
 	cell.appendChild(spelldiv);
-	spelldiv.style.float = float;
+	spelldiv.style.float = floatParam;
 	var spell1 = new Image();
 	spelldiv.appendChild(spell1);
 	spell1.setAttribute("class", "spell1");
@@ -396,11 +391,7 @@ function addPlayer(){
 }
 
 function addPlayerById(playerId){
-	
-	var query = {"command" : "getPlayerInfoById", "playerId": playerId};
-
-	apiReq(query, function(resp) {
-		
+	LeagueApi.getPlayerInfoById(playerId, function(resp) {
 		if(resp == null || resp == false) // call failed
 			return false;
 

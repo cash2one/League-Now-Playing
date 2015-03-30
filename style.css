@@ -4,3 +4,19 @@
 	border: 2px solid black;
 	margin: 0 2px 0 2px;
 }
+
+
+.matchHistory {
+	position: absolute;
+	display: none;
+	border: 3px solid black;
+	background-color: lightgray;
+}
+
+#matchInfoTable {
+	width: 100%;
+	border: 1px solid black;
+}
+#matchInfoTable td {
+	width: 50%;
+}

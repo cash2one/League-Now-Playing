@@ -33,6 +33,13 @@ var LeagueApi = {
 		}
 	},
 
+
+	// tests the key to see if it works. If it does, callback is called.
+	testApiKey: function(key, callback) {
+		var testRequest = {"command" : "test", "testKey" : key};
+		apiReq(testRequest, callback);
+	},
+
 	// mapId : Name
 	mapsById: {1: "Summoner's Rift",
 		2:	"Summoner's Rift",
