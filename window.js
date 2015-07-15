@@ -274,9 +274,19 @@ function setMatchInfo(match, championList, spellKeyList){
 		}
 
 		if(player.teamId >= 200) // >= is for safety. Only ever seen 200 and 100. 200 is red side
-			players.red.push( { "name" : player.summonerName, "id": player.summonerId, "champ" : championList[player.championId], "spell1" : spellKeyList[player.spell1Id], "spell2" : spellKeyList[player.spell2Id] });
+			players.red.push({ "name" : player.summonerName,
+					"id": player.summonerId,
+					"champId" : player.championId,
+					"champ" : championList[player.championId], 
+					"spell1" : spellKeyList[player.spell1Id], 
+					"spell2" : spellKeyList[player.spell2Id] });
 		else
-			players.blue.push({ "name" : player.summonerName, "id": player.summonerId, "champ" : championList[player.championId], "spell1" : spellKeyList[player.spell1Id], "spell2" : spellKeyList[player.spell2Id] });
+			players.blue.push({ "name" : player.summonerName,
+					"id": player.summonerId,
+					"champId" : player.championId,
+					"champ" : championList[player.championId], 
+					"spell1" : spellKeyList[player.spell1Id], 
+					"spell2" : spellKeyList[player.spell2Id] });
 	}
 
 	var div = document.getElementById("matchInfo");
@@ -307,6 +317,7 @@ function setMatchInfo(match, championList, spellKeyList){
 
 function populatePlayerCell(cell, player, floatParam) {
 	appendAddButton(cell, player);
+	cell.dataset.champId = player.champId;
 
 	var span = document.createElement("span");
 	cell.appendChild(span);
@@ -349,7 +360,9 @@ function setChampionIcon(cell, className, champion) {
 		target.src = window.URL.createObjectURL(result);
 		target.alt = champion;
 		target.title = champion;
-
+		target.onclick = function(evt) {
+			toggleChampInfo(cell);
+		}
 	});
 }
 // puts the <spellId>'s icon in <cell>'s child that has <className> className
@@ -357,6 +370,37 @@ function setSpellIcon(cell, className, spellId) {
 	xmlReqAsBlob("GET", LeagueApi.getSpellPortraitUrl(spellId), function(result) {
 		cell.getElementsByClassName(className)[0].src = window.URL.createObjectURL(result);
 	});
+}
+
+function toggleChampInfo(cell) {
+	var champId = cell.dataset.champId;
+	children = cell.getElementsByClassName("champInfo");
+	if(children.length > 0) {
+		cell.removeChild(children[0]);
+		return;
+	}
+	LeagueApi.getChampInfoById(champId, "passive", function(passiveResp) {
+		LeagueApi.getChampInfoById(champId, "spells", function(spellsResp){
+			debugText(passiveResp);
+			debugText(spellsResp);
+			var champInfoBlock = document.createElement("div");
+			champInfoBlock.setAttribute("class", "champInfo");
+			var text = "<table><tbody>"
+					+ "<tr><th>Key</th>"
+					+ "<th>cost</th>"
+					+ "<th>cd</th></tr>";
+			var keyMap = "QWER"
+			for(var i = 0; i < 4; i++) {
+				text = text + "<tr><td>" + keyMap.charAt(i) + "</td>";
+				text = text + "<td>" + spellsResp.spells[i].costBurn+ "</td>";
+				text = text + "<td>" + spellsResp.spells[i].cooldownBurn + "</td></tr>";
+			}
+			text = text + "</table></tbody>";
+			champInfoBlock.innerHTML = text;
+			cell.appendChild(champInfoBlock);
+		});
+	});
+	
 }
 
 

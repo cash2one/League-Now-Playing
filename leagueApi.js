@@ -249,6 +249,21 @@ var LeagueApi = {
 			else
 				callback(JSON.parse(resp));
 		});
+	},
+
+	// calls back with match info if player is in game. otherwise calls back with nothing (aka null).
+	getChampInfoById: function(champId, info, callback, queue) {
+		var query = {"command" : "champInfoById",
+				"champData" : info,
+				"champId" : champId};
+		var func = (queue) ? this.addToQueue : apiReq;
+
+		func(query, function(resp){
+			if(resp.charAt(0) === '<') // 404 or some error received, usually from not being in game
+				callback();
+			else
+				callback(JSON.parse(resp));
+		});
 	}
 	
 };
@@ -287,8 +302,11 @@ function apiReq(query, callback) {
 				callback(resp);
 			});
 			break;
-		case "championInfoById":
-			xmlReq("GET", "https://global.api.pvp.net/api/lol/static-data/" + query.region + "/v1.2/champion/" + query.champId + "?champData=info&api_key=" + key, function(resp) {
+		case "champInfoById":
+			xmlReq("GET", "https://global.api.pvp.net/api/lol/static-data/" 
+				+ query.region + "/v1.2/champion/" + query.champId 
+				+ "?champData=" + query.champData + "&api_key="
+				+ key, function(resp) {
 				callback(resp);
 			});
 			break;
