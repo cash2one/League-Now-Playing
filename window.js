@@ -345,7 +345,11 @@ function appendAddButton(cell, player) {
 // puts the <champion>'s icon in <cell>'s child that has <className> className
 function setChampionIcon(cell, className, champion) {
 	xmlReqAsBlob("GET", LeagueApi.getChampPortraitUrl(champion), function(result) {
-		cell.getElementsByClassName(className)[0].src = window.URL.createObjectURL(result);
+		var target = cell.getElementsByClassName(className)[0];
+		target.src = window.URL.createObjectURL(result);
+		target.alt = champion;
+		target.title = champion;
+
 	});
 }
 // puts the <spellId>'s icon in <cell>'s child that has <className> className
