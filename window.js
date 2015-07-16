@@ -373,34 +373,86 @@ function setSpellIcon(cell, className, spellId) {
 }
 
 function toggleChampInfo(cell) {
-	var champId = cell.dataset.champId;
 	children = cell.getElementsByClassName("champInfo");
 	if(children.length > 0) {
-		cell.removeChild(children[0]);
+		children[0].style.display = 
+				(children[0].style.display === "" ?
+				"none" : "");
 		return;
 	}
-	LeagueApi.getChampInfoById(champId, "passive", function(passiveResp) {
-		LeagueApi.getChampInfoById(champId, "spells", function(spellsResp){
-			debugText(passiveResp);
-			debugText(spellsResp);
-			var champInfoBlock = document.createElement("div");
-			champInfoBlock.setAttribute("class", "champInfo");
-			var text = "<table><tbody>"
-					+ "<tr><th>Key</th>"
-					+ "<th>cost</th>"
-					+ "<th>cd</th></tr>";
-			var keyMap = "QWER"
-			for(var i = 0; i < 4; i++) {
-				text = text + "<tr><td>" + keyMap.charAt(i) + "</td>";
-				text = text + "<td>" + spellsResp.spells[i].costBurn+ "</td>";
-				text = text + "<td>" + spellsResp.spells[i].cooldownBurn + "</td></tr>";
-			}
-			text = text + "</table></tbody>";
-			champInfoBlock.innerHTML = text;
-			cell.appendChild(champInfoBlock);
-		});
-	});
+
+	var champInfoBlock = document.createElement("div");
+	champInfoBlock.setAttribute("class", "champInfo");
+	cell.appendChild(champInfoBlock);
 	
+	champInfoBlock.innerHTML = "loading...";
+
+	var champId = cell.dataset.champId;
+	// LeagueApi.getChampInfoById(champId, "passive", function(passiveResp) {
+	LeagueApi.getChampInfoById(champId, "spells", function(spellsResp){
+		debugText(spellsResp);
+		var table = document.createElement("table");
+		var head = table.insertRow();
+		head.insertCell().innerHTML = "Name (key)";
+		head.insertCell().innerHTML = "cost";
+		head.insertCell().innerHTML = "cd";
+		head.insertCell().innerHTML = "range";
+		
+		var keyMap = "QWERQWER"
+		for(var i = 0; i < spellsResp.spells.length; i++) {
+			var row = table.insertRow();
+			var sp = spellsResp.spells[i];
+			row.insertCell().innerHTML = sp.name + " (" + keyMap.charAt(i) + ")";
+			var cost = sp.resource.replace('{{ cost }}', sp.costBurn);
+			for(var j = 0; j < sp.effectBurn.length; j++)
+				cost = cost.replace('{{ e' + j + ' }}', sp.effectBurn[j]);
+
+			row.insertCell().innerHTML = cost;
+			row.insertCell().innerHTML = sp.cooldownBurn;
+			row.insertCell().innerHTML = sp.rangeBurn;
+
+			attachSelfHandler(row, revealDetailedSpellInfo);
+			var detailRow = table.insertRow();
+			detailRow.style.display = "none";
+			detailCell = detailRow.insertCell();
+			detailCell.colSpan = 4;
+			var detailText = sp.tooltip;
+			
+			if (sp.effectBurn != null)
+				for(var j = 0; j < sp.effectBurn.length; j++) {
+					var reg = new RegExp('{{ e' + j + ' }}', 'g');
+					detailText = detailText.replace(reg, sp.effectBurn[j]);
+				}
+			var scalingDict = {"spelldamage" : "AP", "bonusattackdamage" : "bonus AD",
+					"attackdamage": "AD", "bonushealth" : "bonus HP", "health": "HP",
+					"bonusmana" : "bonus MP", "mana": "MP"}
+			if (sp.vars != null)
+				for (var j = 0; j < sp.vars.length; j++) {
+					var reg = new RegExp('{{ ' + sp.vars[j].key + ' }}', 'g');
+					scalingType = sp.vars[j].link
+					scalingType = (scalingDict.hasOwnProperty(scalingType) ? scalingDict[scalingType] : scalingType) 
+					detailText = detailText.replace(reg, sp.vars[j].coeff[0] + '*' + scalingType)
+				}
+			detailCell.innerHTML = detailText;
+		}
+		champInfoBlock.innerHTML = "";
+		champInfoBlock.appendChild(table);
+	});
+	// });
+}
+
+function attachSelfHandler(element, handler) {
+	element.onclick = function() {
+		handler(element);
+	}
+}
+function revealDetailedSpellInfo(row) {
+	var index = row.rowIndex;
+	var table = row.parentNode;
+	var nextRow = table.rows[index+1];
+	nextRow.style.display = (nextRow.style.display == "") ?
+			"none" : "";
+
 }
 
 

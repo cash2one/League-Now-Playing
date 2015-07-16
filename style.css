@@ -22,6 +22,7 @@ html {
 	border: 1px solid black;
 }
 #matchInfoTable td {
+	vertical-align: top;
 	width: 50%;
 }
 #statement {
@@ -29,4 +30,25 @@ html {
 }
 .champInfo {
 	clear: both;
+}
+.champInfo table {
+	border-spacing: 0px;
+}
+.champInfo td {
+	border: 1px solid black;
+}
+.color99FF99 {
+	color: #449944;
+}
+.color99FF00 {
+	color: #449900;
+}
+.colorFFFF00 {
+	color: #999900;
+}
+.colorFF00FF {
+	color: #990099;
+}
+.colorFF8C00 {
+	color: #994600;
 }
