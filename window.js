@@ -2,6 +2,7 @@ window.onload = function(){
 	document.getElementById("saveListButton").onclick = saveList;
 	document.getElementById("loadListButton").onclick = loadList;
 	document.getElementById("setApiKeyButton").onclick = setApiKey;
+	document.getElementById("backButton").onclick = backFromMatchInfo;
 
 	document.getElementById("apiKey").onkeydown = function(evt){
 		if(evt != null && evt.keyCode != null && evt.keyCode == 13)
@@ -256,11 +257,22 @@ function setSpectatorInfo(pId, gameId, encKey, platformId) {
 
 
 
-
+function backFromMatchInfo(){
+	emptyMatchInfo();
+	document.getElementById("listWrapper").style.display = "";
+	document.getElementById("matchInfo").style.display = "none"
+}
 
 function emptyMatchInfo(){
-	document.getElementById("matchInfo").innerHTML= "";
+	var div = document.getElementById("matchInfo")
+	div.innerHTML= "";
+	var butt = document.createElement("button");
+	butt.id = "backButton";
+	butt.innerHTML = "Back to List";
+	butt.onclick = backFromMatchInfo;
+	div.appendChild(butt);
 }
+
 // fill the matchInfo div with a table that describes the match.
 function setMatchInfo(match, championList, spellKeyList){
 	var players = { "blue" : [] , "red" : [] };
@@ -313,6 +325,10 @@ function setMatchInfo(match, championList, spellKeyList){
 		if(i < players.red.length)
 			populatePlayerCell(right, players.red[i], "left");
 	}
+
+	// Make it display
+	document.getElementById("listWrapper").style.display = "none";
+	document.getElementById("matchInfo").style.display = "";
 }
 
 function populatePlayerCell(cell, player, floatParam) {

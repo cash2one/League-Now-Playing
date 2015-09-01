@@ -6,6 +6,7 @@
     <script src="window.js"></script>
     </head>
     <body>
+        <div id="listWrapper">
         <button id="saveListButton">Save List</button>
         <button id="loadListButton">Load List</button>
         <br />
@@ -22,8 +23,9 @@
         </tbody></table>
         <input type="text" id="playerName"> <button id="addPlayerButton">Add Player</button><br />
         <span id="apiSpan"><input type="text" id="apiKey"> <button id="setApiKeyButton">Set API Key</button></span>
+        </div>
         
-        <div id="matchInfo"></div>
+        <div id="matchInfo" style="display:none;"><button id="backButton">Back to List</button></div>
 
         <div id="statement">League-Now-Playing isn't endorsed by Riot Games and doesn't reflect the views or opinions of Riot Games or anyone officially involved in producing or managing League of Legends. League of Legends and Riot Games are trademarks or registered trademarks of Riot Games, Inc. League of Legends &copy; Riot Games, Inc.</div>
     </body>
