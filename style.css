@@ -20,11 +20,7 @@ html {
 #playersDiv {
 	width: 100%;
 	border: 1px solid black;
-}
-#playersDiv>div>div {
-	width: 100%;
-	display:block;
-	float: inherit;
+	float: left;
 }
 #bluePlayersDiv {
 	vertical-align: top;
@@ -36,6 +32,12 @@ html {
 	width: 50%;
 	float: right;
 }
+#playersDiv>div>div {
+	width: 100%;
+	display:block;
+	float: inherit;
+}
+
 #statement {
 	font-size: 1em;
 }
