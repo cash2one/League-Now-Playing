@@ -17,13 +17,24 @@ html {
 	background-color: lightgray;
 }
 
-#matchInfoTable {
+#playersDiv {
 	width: 100%;
 	border: 1px solid black;
 }
-#matchInfoTable td {
+#playersDiv>div>div {
+	width: 100%;
+	display:block;
+	float: inherit;
+}
+#bluePlayersDiv {
 	vertical-align: top;
 	width: 50%;
+	float: left;
+}
+#redPlayersDiv {
+	vertical-align: top;
+	width: 50%;
+	float: right;
 }
 #statement {
 	font-size: 1em;

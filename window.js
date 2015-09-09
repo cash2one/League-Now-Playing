@@ -4,6 +4,7 @@ window.onload = function(){
 	document.getElementById("setApiKeyButton").onclick = setApiKey;
 	document.getElementById("backButton").onclick = backFromMatchInfo;
 
+	// detect enter keypress
 	document.getElementById("apiKey").onkeydown = function(evt){
 		if(evt != null && evt.keyCode != null && evt.keyCode == 13)
 			setApiKey();
@@ -307,22 +308,23 @@ function setMatchInfo(match, championList, spellKeyList){
 	matchDescription.innerHTML = match.gameType + " of " + match.gameMode + " on " + LeagueApi.getMap(match.mapId);
 	div.appendChild(matchDescription);
 	div.appendChild(document.createElement("br"));
-	var tab = document.createElement("table");
-	tab.id = "matchInfoTable";
-	div.appendChild(tab);
+	var playersDiv = document.createElement("div");
+	playersDiv.id = "playersDiv";
+	div.appendChild(playersDiv);
 
-	var playerMax = players.blue.length;
-	if(players.red.length > playerMax)
-		playerMax = players.red.length;
+	var playerMax = Math.max(players.blue.length, players.red.length);
+	var left = document.createElement("div");
+	var right = document.createElement("div");
+	left.id = "bluePlayersDiv";
+	right.id = "redPlayersDiv";
+	playersDiv.appendChild(left);
+	playersDiv.appendChild(right);
 
 	for(var i = 0; i < playerMax; i++)
 	{
-		var row = tab.insertRow(i);
-		var left = row.insertCell(0);
-		var right = row.insertCell(1);
-		if(i < players.blue.length)
+		if(i < players.blue.length) // if there is an i'th player on blue
 			populatePlayerCell(left, players.blue[i], "right");
-		if(i < players.red.length)
+		if(i < players.red.length) // same as above for red
 			populatePlayerCell(right, players.red[i], "left");
 	}
 
@@ -332,19 +334,22 @@ function setMatchInfo(match, championList, spellKeyList){
 }
 
 function populatePlayerCell(cell, player, floatParam) {
-	appendAddButton(cell, player);
-	cell.dataset.champId = player.champId;
+	var container = document.createElement("div");
+	cell.appendChild(container);
+
+	appendAddButton(container, player);
+	container.dataset.champId = player.champId;
 
 	var span = document.createElement("span");
-	cell.appendChild(span);
+	container.appendChild(span);
 	span.innerHTML = player.name;
 	var champImg = new Image();
-	cell.appendChild(champImg);
+	container.appendChild(champImg);
 	champImg.setAttribute("class", "champ");
 	champImg.style.float = floatParam;
 
 	var spelldiv = document.createElement("div");
-	cell.appendChild(spelldiv);
+	container.appendChild(spelldiv);
 	spelldiv.style.float = floatParam;
 	var spell1 = new Image();
 	spelldiv.appendChild(spell1);
@@ -353,9 +358,9 @@ function populatePlayerCell(cell, player, floatParam) {
 	spelldiv.appendChild(spell2);
 	spell2.setAttribute("class", "spell2");
 
-	setSpellIcon(cell, "spell1", player.spell1);
-	setSpellIcon(cell, "spell2", player.spell2);
-	setChampionIcon(cell, "champ", player.champ);
+	setSpellIcon(container, "spell1", player.spell1);
+	setSpellIcon(container, "spell2", player.spell2);
+	setChampionIcon(container, "champ", player.champ);
 	
 }
 
