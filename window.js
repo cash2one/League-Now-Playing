@@ -335,10 +335,19 @@ function setMatchInfo(match, championList, spellKeyList){
 
 function populatePlayerCell(cell, player, floatParam) {
 	var container = document.createElement("div");
+	var dragEventList = {'dragstart': handleDragStart, 'dragend' : handleDragEnd,
+			'dragenter' : handleDragEnter, 'dragleave' : handleDragLeave, 
+			'dragover' : handleDragOver, 'drop' : handleDrop };
+	for (var key in dragEventList) {
+		container.addEventListener(key, dragEventList[key], false);
+	}
+	container.draggable = true;
+
 	cell.appendChild(container);
 
 	appendAddButton(container, player);
 	container.dataset.champId = player.champId;
+	container.id = "p_" + player.name;
 
 	var span = document.createElement("span");
 	container.appendChild(span);
@@ -392,6 +401,8 @@ function setSpellIcon(cell, className, spellId) {
 		cell.getElementsByClassName(className)[0].src = window.URL.createObjectURL(result);
 	});
 }
+
+
 
 function toggleChampInfo(cell) {
 	children = cell.getElementsByClassName("champInfo");

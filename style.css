@@ -37,6 +37,9 @@ html {
 	display:block;
 	float: inherit;
 }
+.draggedOver {
+	background-color: gray;
+}
 
 #statement {
 	font-size: 1em;
