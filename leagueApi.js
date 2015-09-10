@@ -74,10 +74,25 @@ var LeagueApi = {
 	},
 
 	getChampPortraitUrl: function(championName){
-		return "http://ddragon.leagueoflegends.com/cdn/5.2.1/img/champion/" + championName + ".png";
+		return "http://ddragon.leagueoflegends.com/cdn/" + LeagueApi.realmVersion.champion + "/img/champion/" + championName + ".png";
 	},
 	getSpellPortraitUrl: function(spellKey){
-		return "http://ddragon.leagueoflegends.com/cdn/5.2.1/img/spell/" + spellKey + ".png";
+		return "http://ddragon.leagueoflegends.com/cdn/" + LeagueApi.realmVersion.summoner + "/img/spell/" + spellKey + ".png";
+	},
+
+	realmVersion : {"assigned":false},
+	getRealmVersion: function(callback){
+		if (!LeagueApi.realmVersion.assigned) {
+			var query = {"command" : "getRealmVersion"}
+			apiReq(query, function(result) {
+				LeagueApi.realmVersion = JSON.parse(result).n;
+				LeagueApi.realmVersion.assigned = true;
+				if (callback)
+					callback(result);
+			});
+		}
+		else if(callback)
+			callback(LeagueApi.realmVersion);
 	},
 
 
@@ -86,7 +101,8 @@ var LeagueApi = {
 		if(platform == null)
 			platform = "NA1";
 	
-		var currExe = "\"C:\\Riot Games\\League of Legends\\RADS\\solutions\\lol_game_client_sln\\releases\\0.0.1.79\\deploy\\League of Legends.exe\"";
+		var releaseNum = "0.0.1.103";
+		var currExe = "\"C:\\Riot Games\\League of Legends\\RADS\\solutions\\lol_game_client_sln\\releases\\" + releaseNum + "\\deploy\\League of Legends.exe\"";
 		var constParams = "\"8394\" \"LoLLauncher.exe\" \"\""; // <"8394" "LoLLauncher.exe" "">
 		var lastParam = "\"spectator " + this.getSpecGrid(platform) + " " + encKey + " " + matchId + " " + platform + "\"";
 		return currExe + " " + constParams + " " + lastParam;
@@ -217,7 +233,7 @@ var LeagueApi = {
 			callback(this.spellNameList, this.spellKeyList);
 		else
 		{
-			var query = {"command" : "getspellNameList"};
+			var query = {"command" : "getSpellNameList"};
 			var func = (queue) ? this.addToQueue : apiReq;
 
 			func(query, function (resp) {
@@ -282,6 +298,11 @@ function apiReq(query, callback) {
 		query["platform"] = "NA1";
 	switch(query.command)
 	{
+		case "getRealmVersion":
+			xmlReq("GET", "https://global.api.pvp.net/api/lol/static-data/" + query.region + "/v1.2/realm?api_key=" + key, function(resp) {
+				callback(resp);
+			});
+			break;
 		case "getChampionList":
 			xmlReq("GET", "https://global.api.pvp.net/api/lol/static-data/" + query.region + "/v1.2/champion?champData=info&api_key=" + key, function(resp) {
 				callback(resp);
@@ -292,7 +313,7 @@ function apiReq(query, callback) {
 				callback(resp);
 			});
 			break;
-		case "getspellNameList":
+		case "getSpellNameList":
 			xmlReq("GET", "https://global.api.pvp.net/api/lol/static-data/" + query.region + "/v1.2/summoner-spell?spellData=key&api_key=" + key, function(resp) {
 				callback(resp);
 			});

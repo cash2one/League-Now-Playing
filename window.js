@@ -25,8 +25,10 @@ window.onload = function(){
 			key = result.key;
 			var spanNode = document.getElementById("apiSpan");
 			spanNode.style.display = "none";
+			LeagueApi.getRealmVersion();
 		}
 	});
+
 };
 
 function debugText(text){
