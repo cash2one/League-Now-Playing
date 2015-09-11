@@ -73,13 +73,15 @@ function getMatchInfo(pId){
 	LeagueApi.getCurrentMatch(pId, function(resp){
 		if(resp == null) // from 404 or some error
 		{
+			var target = getMatchInfoCell(document.getElementById(pId));
+			target.innerHTML = "not in game";
+
 			LeagueApi.getPlayerInfoById(pId, function(resp) {
 				if(resp != null)
 				{
 					var lastSeen = resp[pId].revisionDate; // ms
 					var nowTime = (new Date).getTime(); // ms
 					var timeSinceSeen = Math.floor((nowTime - lastSeen) / 1000 / 60); // minutes
-					var target = getMatchInfoCell(document.getElementById(pId));
 					target.innerHTML = "last seen " + Math.floor(timeSinceSeen / 60 / 24) + "d " + Math.floor((timeSinceSeen / 60) % 24) + "h " + timeSinceSeen % 60 + "m ago";
 				}
 			});
